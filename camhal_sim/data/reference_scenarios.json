@@ -1,0 +1,759 @@
+{
+ "source": "camera-hal-analysis/scripts/camera_hal_failure_data{,_v2}.py",
+ "categories": [
+  "Stream Config",
+  "Buffer Management",
+  "Request Pipeline",
+  "Metadata",
+  "3A Tuning",
+  "Sensor Driver",
+  "Sync Timing",
+  "Performance",
+  "HAL Interface",
+  "Security"
+ ],
+ "platforms": [
+  {
+   "code": "QCOM-CamX-Spectra",
+   "family": "Qualcomm CamX HAL",
+   "desc_ko": "Qualcomm Spectra ISP용 CamX/CHI-CDK 카메라 HAL3",
+   "fw_prefix": "CAMX",
+   "host_platforms": [
+    "Android 14 CameraService (AIDL)",
+    "Android 13 CameraService (AIDL)",
+    "Android 12 CameraService (HIDL 2.6)",
+    "GStreamer camera-service (Qualcomm Linux)"
+   ]
+  },
+  {
+   "code": "EXYNOS-CamHAL3",
+   "family": "Exynos Camera HAL",
+   "desc_ko": "Exynos ISP 기반 Camera HAL3 (ExynosCamera 파이프 구조)",
+   "fw_prefix": "EXHA",
+   "host_platforms": [
+    "Android 14 CameraService (AIDL)",
+    "Android 13 CameraService (AIDL)",
+    "Tizen camera-hal-interface"
+   ]
+  },
+  {
+   "code": "MTK-Camera3HAL",
+   "family": "MediaTek Camera HAL",
+   "desc_ko": "MediaTek ISP/Camera3 HAL (mtkcam 파이프라인)",
+   "fw_prefix": "MTKC",
+   "host_platforms": [
+    "Android 14 CameraService (AIDL)",
+    "Android 11 CameraService (HIDL 2.4)",
+    "AOSP 기반 커스텀 ROM"
+   ]
+  },
+  {
+   "code": "RK-ISP3-HAL",
+   "family": "Rockchip Camera HAL",
+   "desc_ko": "Rockchip RKISP3 + camera_engine_rkaiq 기반 HAL3",
+   "fw_prefix": "RKAQ",
+   "host_platforms": [
+    "Android 13 CameraService (AIDL)",
+    "Linux 6.1 + rkaiq 3A 서버",
+    "Buildroot media stack"
+   ]
+  },
+  {
+   "code": "IPU6-CameraHAL",
+   "family": "Intel IPU6 HAL",
+   "desc_ko": "Intel IPU6 유저스페이스 카메라 HAL (icamerasrc 연동)",
+   "fw_prefix": "IPU6",
+   "host_platforms": [
+    "ChromeOS cros-camera",
+    "Linux 6.8 + icamerasrc GStreamer",
+    "Windows WinMF 브리지"
+   ]
+  },
+  {
+   "code": "LIBCAM-AndroidHAL",
+   "family": "libcamera Android HAL",
+   "desc_ko": "libcamera src/android 기반 Android Camera HAL3 어댑터",
+   "fw_prefix": "LCAM",
+   "host_platforms": [
+    "Android 13 CameraService (AIDL)",
+    "Raspberry Pi 5 PiSP 파이프라인",
+    "RK3399 rkisp1 파이프라인"
+   ]
+  },
+  {
+   "code": "CROS-CameraHAL",
+   "family": "ChromeOS Camera HAL",
+   "desc_ko": "ChromeOS cros-camera HAL 어댑터 (Mojo IPC + USB HAL)",
+   "fw_prefix": "CROS",
+   "host_platforms": [
+    "Chrome 브라우저 클라이언트",
+    "ARCVM Android 컨테이너",
+    "cros-camera-test 하네스"
+   ]
+  },
+  {
+   "code": "V4L2-GenericHAL",
+   "family": "Generic V4L2 HAL",
+   "desc_ko": "V4L2 기반 범용 HAL3 (외장/USB 카메라)",
+   "fw_prefix": "V4L2",
+   "host_platforms": [
+    "Android 14 external camera provider",
+    "UVC 웹캠 레퍼런스 보드",
+    "산업용 MIPI-CSI 브리지 모듈"
+   ]
+  },
+  {
+   "code": "EMU-CameraHAL",
+   "family": "Emulated Camera HAL",
+   "desc_ko": "AOSP EmulatedCamera (에뮬레이터/Cuttlefish 레퍼런스 HAL)",
+   "fw_prefix": "EMUC",
+   "host_platforms": [
+    "Cuttlefish 가상 디바이스",
+    "Android Emulator (goldfish)",
+    "CI 자동화 팜"
+   ]
+  },
+  {
+   "code": "AUTO-CamHAL-EVS",
+   "family": "Automotive Camera HAL",
+   "desc_ko": "차량용 카메라 HAL + EVS(Exterior View System) 스택",
+   "fw_prefix": "EVSC",
+   "host_platforms": [
+    "Android Automotive OS 14",
+    "AUTOSAR 도메인 게이트웨이 연동",
+    "서라운드뷰 4채널 ECU"
+   ]
+  }
+ ],
+ "scenarios": [
+  {
+   "id": "F00",
+   "family": "Qualcomm CamX HAL",
+   "summary": "[{chip}] 고해상도 스냅샷 + 프리뷰 + 비디오 3스트림 조합에서 configureStreams 실패",
+   "symptom": "프리뷰(1080p PRIVATE) + 비디오(4K PRIVATE) + 스냅샷(108MP BLOB)을 동시에 요청하면 configureStreams가 ILLEGAL_ARGUMENT로 거부됩니다. 스냅샷 해상도를 64MP로 낮추면 통과합니다.",
+   "repro": [
+    "CameraX VideoCapture + ImageCapture 동시 바인드",
+    "스냅샷 스트림 108MP BLOB 요청",
+    "동일 조합을 camera2 API로 직접 재현"
+   ],
+   "severity": "Critical",
+   "category": "Stream Config",
+   "root_cause": "CHI usecase 토폴로지 선택 로직이 IFE 출력 포트 대역폭을 정적 표로만 판정한다. 108MP RDI 경로가 IPE를 경유할 때 필요한 추가 포트를 계산에 넣지 않아, 실제로는 가능한 조합을 사전에 기각했다. 스트림 조합 판정과 실제 파이프라인 생성이 서로 다른 제약식을 쓴 것이 근본 원인.",
+   "resolution": "usecase 선택 시 IFE/IPE 포트 사용량을 실제 파이프라인 그래프에서 산출하도록 통일하고, 정적 표는 상한 검증용으로만 사용. StreamConfigurationMap이 광고하는 조합과 configureStreams 수락 집합이 일치하는지 검증하는 회귀 추가.",
+   "workaround": "스냅샷을 64MP 이하로 제한하거나 비디오 스트림을 1080p로 낮추면 통과.",
+   "log_excerpt": "CamX: [ERROR][CORE] usecase selection failed, no match for 3 streams\nCamX: IFE port budget exceeded (req=4, avail=3)\nCameraService: configureStreams: -22 (ILLEGAL_ARGUMENT)"
+  },
+  {
+   "id": "F01",
+   "family": "Qualcomm CamX HAL",
+   "summary": "[{chip}] ZSL 연사 중 출력 버퍼 미반환으로 프리뷰 정지 후 세션 타임아웃",
+   "symptom": "ZSL 모드 연사를 20장 이상 촬영하면 프리뷰가 멈추고 약 5초 뒤 CameraService가 세션을 강제 종료합니다. 재진입하면 정상 동작합니다.",
+   "repro": [
+    "ZSL 활성 상태에서 연사 30장",
+    "저장 지연이 큰 저용량 스토리지",
+    "촬영 중 화면 회전 동반"
+   ],
+   "severity": "Critical",
+   "category": "Buffer Management",
+   "root_cause": "ZSL 링 버퍼에서 선택되지 않은 프레임의 출력 버퍼를 반환하는 경로가 예외 흐름(요청 취소·플러시)에서 누락됐다. 반환되지 않은 버퍼가 누적되어 gralloc 풀이 고갈되고, 이후 processCaptureRequest가 버퍼를 얻지 못해 결과가 영영 나오지 않는다. HAL은 에러를 올리지 않고 조용히 대기해 상위가 타임아웃으로만 인지했다.",
+   "resolution": "ZSL 프레임 선택 이후 미사용 버퍼를 단일 회수 지점에서 반드시 반환하도록 소유권 경로를 일원화. 버퍼 회계(획득/반환) 불일치를 디버그 빌드에서 즉시 assert하고, 릴리스 빌드는 ERROR_REQUEST로 상위에 보고.",
+   "workaround": "ZSL 비활성화 또는 연사 장수를 10장 이하로 제한.",
+   "log_excerpt": "CamX: buffer manager: outstanding=32 max=32, stall\nCamX: [WARN] request 118 waiting for output buffer 4200ms\nCameraService: Camera 0: Request timed out, flushing"
+  },
+  {
+   "id": "F02",
+   "family": "Qualcomm CamX HAL",
+   "summary": "[{chip}] 논리 멀티카메라 전환 시 물리 카메라 메타데이터 누락으로 앱 크래시",
+   "symptom": "광각↔망원 줌 전환 순간의 캡처 결과에서 physical camera metadata가 비어 있어, 이를 읽는 앱이 NullPointerException으로 종료됩니다.",
+   "repro": [
+    "논리 카메라로 0.6x↔3x 연속 줌",
+    "TotalCaptureResult에서 physical result 조회",
+    "전환 경계 배율에서 반복"
+   ],
+   "severity": "Major",
+   "category": "Metadata",
+   "root_cause": "물리 카메라 전환 프레임에서 CHI가 이전 물리 ID의 결과를 폐기하고 새 ID의 결과를 아직 받지 못한 상태로 partial result를 올린다. 이때 physical camera metadata 목록이 빈 채로 최종 결과로 승격되어, 스펙상 보장돼야 할 필드가 사라졌다.",
+   "resolution": "전환 프레임에서는 직전 물리 카메라의 메타데이터를 유지한 채 결과를 올리고, 새 물리 ID의 첫 유효 결과가 도착한 시점에 교체하도록 순서를 강제. 물리 메타데이터 존재 여부를 결과 방출 직전에 검증.",
+   "workaround": "앱에서 physical result를 방어적으로 null 검사하면 크래시는 회피.",
+   "log_excerpt": "CamX: physical meta list empty at frame 884 (switch wide->tele)\nCameraService: partial result 2/2 published\nAndroidRuntime: NPE at CaptureResult.getPhysicalCameraResults"
+  },
+  {
+   "id": "F03",
+   "family": "Exynos Camera HAL",
+   "summary": "[{chip}] 60fps 비디오 녹화 중 간헐적 프레임 드롭과 타임스탬프 역전",
+   "symptom": "60fps 녹화에서 수 분에 한 번 프레임이 밀리고, 기록된 타임스탬프가 앞 프레임보다 작아져 재생 시 화면이 순간 뒤로 갑니다.",
+   "repro": [
+    "1080p60 녹화 10분 이상",
+    "백그라운드 앱 다수로 부하 부여",
+    "muxer 입력 타임스탬프 로그 비교"
+   ],
+   "severity": "Critical",
+   "category": "Sync Timing",
+   "root_cause": "HAL이 결과 타임스탬프를 센서 SOF 인터럽트 시각이 아니라 파이프 단계별 완료 시각에서 채운다. 파이프가 밀리면 단계 완료 순서가 뒤바뀌어 타임스탬프가 역전된다. 스펙상 타임스탬프는 노출 시작 기준 단조증가여야 하는데 그 불변식을 코드가 보장하지 않았다.",
+   "resolution": "타임스탬프 소스를 센서 SOF 기준 단일 경로로 고정하고, 결과 방출 직전 단조증가를 검증해 위반 시 해당 요청을 ERROR_REQUEST로 처리. 파이프 완료 시각은 디버그 정보로만 유지.",
+   "workaround": "30fps 녹화에서는 재현되지 않음.",
+   "log_excerpt": "ExynosCamera: pipe SCP done ts=98213441000\nExynosCamera: pipe SCC done ts=98213424000 (earlier)\nMediaCodec: input timestamp went backwards, dropping"
+  },
+  {
+   "id": "F04",
+   "family": "Exynos Camera HAL",
+   "summary": "[{chip}] 저조도 장면에서 AE 수렴이 진동하며 밝기가 주기적으로 출렁임",
+   "symptom": "20lux 이하 실내에서 프리뷰 밝기가 약 1초 주기로 밝아졌다 어두워졌다를 반복합니다. 조도를 올리면 안정됩니다.",
+   "repro": [
+    "조도 10~20lux 고정 광원",
+    "AE 자동, 노출 보정 0",
+    "프레임별 노출/게인 로그 수집"
+   ],
+   "severity": "Major",
+   "category": "3A Tuning",
+   "root_cause": "저조도에서 노출 상한에 도달하면 AE가 게인으로만 보정하는데, 게인 변화가 통계에 반영되기까지 3프레임 지연이 있다. 제어 루프가 이 지연을 모델에 넣지 않아 과보정과 역보정이 반복되는 진동에 빠졌다. 고조도에서는 노출 축이 함께 움직여 루프 이득이 낮아 문제가 드러나지 않았다.",
+   "resolution": "AE 제어 루프에 통계 지연만큼의 예측 보상을 넣고, 노출 상한 도달 구간에서 게인 스텝 크기를 제한. 저조도 수렴 시나리오를 튜닝 회귀 시험에 추가.",
+   "workaround": "AE 잠금 또는 수동 노출 사용 시 회피.",
+   "log_excerpt": "AE: exposure clamped at max 33ms, gain 8.0->14.2\nAE: luma target 380 actual 612, gain 14.2->6.1\nAE: oscillation detected, period 14 frames"
+  },
+  {
+   "id": "F05",
+   "family": "Exynos Camera HAL",
+   "summary": "[{chip}] 세션 재구성 반복 시 HAL 프로세스 메모리 증가로 OOM 종료",
+   "symptom": "앱 전환으로 카메라 세션을 200회 이상 열고 닫으면 HAL 프로세스 RSS가 계속 증가해 결국 OOM으로 종료됩니다.",
+   "repro": [
+    "open→configureStreams→close 200회 반복",
+    "매 회 스트림 조합 변경",
+    "RSS 추이 모니터링"
+   ],
+   "severity": "Critical",
+   "category": "Performance",
+   "root_cause": "세션마다 생성되는 파이프 객체가 콜백 등록 해제 없이 소멸되어, 콜백 테이블이 소멸된 객체를 계속 참조한다. 참조가 남아 메모리가 회수되지 않고 세션 수에 비례해 누적된다. 단일 세션 시험에서는 드러나지 않는 유형.",
+   "resolution": "파이프 소멸자에서 등록된 콜백을 반드시 해제하도록 수명주기를 명시하고, 세션 종료 후 잔존 객체 수를 카운터로 노출. 장시간 반복 세션 시험을 CI에 추가.",
+   "workaround": "주기적으로 카메라 앱을 완전 종료하면 회수됨.",
+   "log_excerpt": "HAL: session closed, pipes alive=187 (expected 0)\nmeminfo: camera.provider RSS 1.9GB\nlowmemorykiller: killing camera.provider adj=0"
+  },
+  {
+   "id": "F06",
+   "family": "MediaTek Camera HAL",
+   "summary": "[{chip}] 외장 USB 카메라 연결 해제 시 provider가 디바이스 상태를 갱신하지 않음",
+   "symptom": "USB 카메라를 뽑아도 카메라 목록에 남아 있고, 해당 ID로 open을 시도하면 앱이 5초 대기 후 실패합니다.",
+   "repro": [
+    "UVC 카메라 연결 후 앱에서 인식 확인",
+    "동작 중 케이블 분리",
+    "getCameraIdList 재조회"
+   ],
+   "severity": "Major",
+   "category": "HAL Interface",
+   "root_cause": "provider가 udev/uevent 기반 제거 이벤트를 구독하지 않고 초기 열거 결과만 캐시한다. 물리적 제거가 상태 콜백으로 올라가지 않아 프레임워크는 계속 NOT_PRESENT가 아닌 PRESENT로 알고 있었다. 열거는 이벤트 기반이어야 하는데 1회성 스냅샷으로 구현된 것이 원인.",
+   "resolution": "외장 카메라 노드의 추가/제거 이벤트를 구독해 상태 콜백으로 즉시 전파하고, 제거 시 진행 중 세션을 DISCONNECTED로 정리. 열거 캐시는 이벤트로만 갱신.",
+   "workaround": "카메라 서비스 재시작 시 목록이 정리됨.",
+   "log_excerpt": "provider: cached id list [0,1,2] (external=2)\nkernel: usb 1-2: USB disconnect\nCameraService: open(2) timeout after 5000ms"
+  },
+  {
+   "id": "F07",
+   "family": "MediaTek Camera HAL",
+   "summary": "[{chip}] 플래시 촬영 시 첫 프레임의 AWB가 텅스텐으로 고정되어 색온도 오류",
+   "symptom": "플래시를 켜고 촬영하면 결과 이미지가 전체적으로 푸르게 나옵니다. 플래시 없이 찍으면 정상입니다.",
+   "repro": [
+    "실내 텅스텐 조명에서 플래시 강제 발광",
+    "프리캡처 시퀀스 정상 완료 확인",
+    "결과 메타데이터의 AWB 게인 확인"
+   ],
+   "severity": "Major",
+   "category": "3A Tuning",
+   "root_cause": "프리캡처에서 계산한 플래시 광원용 AWB 게인이 본 촬영 요청에 전달되지 않고, 프리캡처 직전의 환경광 기준 게인이 재사용된다. 플래시 발광 프레임의 실제 광원은 주광에 가까운데 텅스텐 보정이 적용되어 색이 틀어졌다. 프리캡처 결과를 본 촬영에 넘기는 연결이 끊어져 있던 것.",
+   "resolution": "프리캡처가 산출한 플래시 기준 AWB 게인을 캡처 요청 컨텍스트에 명시적으로 전달하고, 플래시 발광 프레임에는 환경광 게인을 적용하지 않도록 분기. 색온도 회귀를 광원별 시험표에 추가.",
+   "workaround": "플래시 대신 화면 조명을 쓰거나 수동 화이트밸런스 지정.",
+   "log_excerpt": "AWB: precapture flash gains r=1.92 b=1.44 computed\nAWB: capture applied gains r=2.71 b=1.05 (ambient)\nmeta: colorCorrectionGains mismatch with flashState=FIRED"
+  },
+  {
+   "id": "F08",
+   "family": "MediaTek Camera HAL",
+   "summary": "[{chip}] 카메라 HAL 샌드박스 정책 누락으로 외장 카메라 노드 접근 거부",
+   "symptom": "신규 보드에서 외장 카메라만 동작하지 않고 커널 로그에 접근 거부가 기록됩니다. 내장 카메라는 정상입니다.",
+   "repro": [
+    "신규 보드 이미지로 부팅",
+    "UVC 카메라 연결 후 앱 실행",
+    "감사 로그 확인"
+   ],
+   "severity": "Major",
+   "category": "Security",
+   "root_cause": "새 보드에서 외장 카메라 노드가 다른 디바이스 클래스로 생성되면서 기존 보안 정책의 라벨 규칙에 걸리지 않았다. HAL 프로세스가 해당 노드를 열 권한을 얻지 못해 열거 자체가 실패했다. 정책이 노드 경로 패턴에 의존해 하드웨어 변경에 취약했던 것이 원인.",
+   "resolution": "노드 라벨을 경로 패턴이 아니라 디바이스 클래스 기준으로 부여하도록 정책을 수정하고, 부팅 시 카메라 노드 라벨을 점검하는 자체 진단을 추가. 보드 브링업 체크리스트에 정책 검증 항목 추가.",
+   "workaround": "없음. 정책 수정 필요.",
+   "log_excerpt": "avc: denied { read write } for name=\"video3\" scontext=camera.provider\nprovider: open /dev/video3 failed: Permission denied\nprovider: external camera enumeration: 0 found"
+  },
+  {
+   "id": "F09",
+   "family": "Rockchip Camera HAL",
+   "summary": "[{chip}] RAW 스트림 요청 시 ISP 파이프라인 포맷 협상 실패로 스트림 생성 거부",
+   "symptom": "RAW10 스트림을 프리뷰와 함께 요청하면 configureStreams가 실패합니다. RAW 단독 또는 프리뷰 단독은 동작합니다.",
+   "repro": [
+    "RAW_SENSOR + PRIVATE 프리뷰 동시 구성",
+    "센서 RAW10 모드 확인",
+    "미디어 그래프 포맷 전파 확인"
+   ],
+   "severity": "Major",
+   "category": "Stream Config",
+   "root_cause": "미디어 그래프에서 센서 출력 포맷을 전파할 때 RAW 경로와 ISP 처리 경로가 같은 subdev 패드를 공유한다. 한쪽이 포맷을 설정하면 다른 쪽 설정이 덮어써져, 두 경로를 동시에 여는 조합에서만 협상이 깨졌다. 패드별 포맷 소유권이 정의되지 않은 것이 원인.",
+   "resolution": "RAW 경로를 별도 패드로 분리하고 포맷 설정 순서를 그래프 구성 단계에서 한 번만 수행하도록 변경. 동시 조합 시 포맷 충돌을 사전 검증해 명확한 오류로 보고.",
+   "workaround": "RAW와 프리뷰를 시분할로 번갈아 사용.",
+   "log_excerpt": "rkisp: set_fmt on pad 0 SRGGB10 ok\nrkisp: set_fmt on pad 0 NV12 overwrites raw\nHAL: negotiate failed for stream 1, configureStreams -22"
+  },
+  {
+   "id": "F10",
+   "family": "Rockchip Camera HAL",
+   "summary": "[{chip}] 3A 서버 재시작 후 튜닝 파라미터가 기본값으로 되돌아감",
+   "symptom": "3A 서비스가 재시작되면 화질이 눈에 띄게 달라집니다. 기기를 재부팅하면 정상으로 돌아옵니다.",
+   "repro": [
+    "3A 서버 프로세스 강제 종료 후 자동 재시작",
+    "동일 장면 촬영 비교",
+    "적용 중인 튜닝 파일 확인"
+   ],
+   "severity": "Major",
+   "category": "3A Tuning",
+   "root_cause": "HAL이 튜닝 파일을 최초 1회만 읽어 3A 서버에 전달하고, 서버 재시작 시 재전달 경로가 없다. 서버는 자신의 내장 기본값으로 기동해 화질이 달라졌다. 두 프로세스의 수명주기가 다른데 설정 전달이 일회성으로 설계된 것이 원인.",
+   "resolution": "3A 서버 연결 수립 시점마다 튜닝 파라미터를 전달하도록 변경하고, 서버가 적용한 튜닝 식별자를 결과 메타데이터에 실어 불일치를 검출 가능하게 함.",
+   "workaround": "3A 서버 재시작 후 카메라 앱을 완전히 재시작.",
+   "log_excerpt": "rkaiq: server restarted, loading built-in defaults\nHAL: tuning file pushed once at boot (not re-sent)\niq: active tuning id=0 (expected 0x3C21)"
+  },
+  {
+   "id": "F11",
+   "family": "Rockchip Camera HAL",
+   "summary": "[{chip}] 센서 전원 시퀀스 마진 부족으로 콜드 부팅 시 낮은 확률로 카메라 열기 실패",
+   "symptom": "부팅 직후 첫 카메라 실행에서 약 2% 확률로 열기에 실패합니다. 재시도하면 항상 성공합니다.",
+   "repro": [
+    "콜드 부팅 200회 후 즉시 카메라 실행",
+    "저온 환경에서 재현율 상승",
+    "센서 ID 읽기 실패 확인"
+   ],
+   "severity": "Major",
+   "category": "Sensor Driver",
+   "root_cause": "센서 드라이버가 전원 인가 후 대기 시간을 데이터시트 최소값으로 잡았다. 저온에서 레귤레이터 상승 시간이 길어지면 클럭 공급 시점에 전원이 아직 규정 전압에 도달하지 못해 센서가 초기화되지 않는다. 최소값에 여유가 없던 것이 원인.",
+   "resolution": "전원 안정화 대기를 데이터시트 최소값 대비 여유를 두어 조정하고, 센서 ID 읽기 실패 시 전원 시퀀스를 재수행하는 재시도를 드라이버에 추가. 저온 콜드 부팅을 양산 시험 항목에 포함.",
+   "workaround": "앱에서 열기 실패 시 1회 재시도하면 사용자에게는 드러나지 않음.",
+   "log_excerpt": "sensor: power on, delay 1ms, mclk enabled\nsensor: read chip id failed (-EIO), got 0x0000\nHAL: openDevice failed, ret=-ENODEV"
+  },
+  {
+   "id": "F12",
+   "family": "Intel IPU6 HAL",
+   "summary": "[{chip}] 화상회의 앱에서 첫 프레임까지 3초 이상 지연",
+   "symptom": "카메라를 켜면 첫 화면이 나오기까지 3초 넘게 걸립니다. 두 번째 실행부터는 1초 이내입니다.",
+   "repro": [
+    "부팅 후 첫 카메라 실행",
+    "화상회의 앱과 브라우저 각각 측정",
+    "단계별 소요 시간 계측"
+   ],
+   "severity": "Major",
+   "category": "Performance",
+   "root_cause": "첫 실행에서 튜닝·펌웨어 바이너리를 디스크에서 읽어 파싱하는 작업이 스트림 시작 경로에 동기로 들어가 있다. 두 번째부터는 페이지 캐시 덕분에 빨라져 문제가 가려졌다. 초기화 비용이 지연 경로에 놓인 것이 원인.",
+   "resolution": "펌웨어·튜닝 로딩을 서비스 기동 시점에 미리 수행하고, 스트림 시작 경로에서는 이미 적재된 것을 참조만 하도록 분리. 첫 프레임 지연을 지표로 상시 측정.",
+   "workaround": "서비스를 미리 기동해 두면 체감 지연 감소.",
+   "log_excerpt": "ipu6: loading firmware binary 41MB (2280ms)\nipu6: tuning parse 620ms\nHAL: first frame at 3184ms after open"
+  },
+  {
+   "id": "F13",
+   "family": "Intel IPU6 HAL",
+   "summary": "[{chip}] 두 앱이 동시에 카메라를 열면 두 번째 앱에서 녹색 프레임 출력",
+   "symptom": "브라우저와 회의 앱이 동시에 카메라를 사용하면 나중에 연 쪽 화면이 전체 녹색으로 나옵니다.",
+   "repro": [
+    "앱 A에서 카메라 사용 중",
+    "앱 B에서 동일 카메라 열기",
+    "출력 프레임 덤프 비교"
+   ],
+   "severity": "Critical",
+   "category": "Buffer Management",
+   "root_cause": "두 클라이언트가 같은 버퍼 풀을 공유하는데, 버퍼 소유권이 클라이언트별로 구분되지 않는다. 한쪽이 반환한 버퍼를 다른 쪽이 채워지지 않은 상태로 사용하면서 초기화되지 않은 영역이 녹색으로 렌더링됐다. 다중 클라이언트 격리가 없던 것이 원인.",
+   "resolution": "클라이언트별로 버퍼 풀을 분리하고, 풀 간 버퍼 이동을 금지. 프레임을 내보내기 전에 유효 데이터 기록 여부를 확인하는 검사를 추가.",
+   "workaround": "한 번에 한 앱만 카메라를 사용.",
+   "log_excerpt": "hal_adapter: client 2 attached to shared pool id=0\nipu6: buffer 7 dequeued without valid payload\nclient2: frame checksum matches zero-fill pattern"
+  },
+  {
+   "id": "F14",
+   "family": "libcamera Android HAL",
+   "summary": "[{chip}] 호환성 시험에서 필수 정적 메타데이터 누락으로 다수 항목 실패",
+   "symptom": "카메라 호환성 시험에서 여러 항목이 실패하며, 공통적으로 특정 정적 특성 값을 읽지 못한다는 오류가 나옵니다.",
+   "repro": [
+    "호환성 시험 카메라 모듈 실행",
+    "정적 특성 덤프와 필수 목록 대조",
+    "지원 레벨 선언 확인"
+   ],
+   "severity": "Blocker",
+   "category": "Metadata",
+   "root_cause": "HAL 어댑터가 파이프라인에서 얻을 수 있는 값만 정적 메타데이터로 채우고, 파이프라인이 제공하지 않는 필수 항목은 아예 생략했다. 선언한 지원 레벨이 요구하는 필수 항목 집합을 만족하지 못해 시험이 실패했다. 레벨 선언과 실제 채운 항목 사이에 검증이 없던 것이 원인.",
+   "resolution": "선언한 지원 레벨의 필수 항목 목록을 코드에 두고, 정적 메타데이터 구성 직후 누락 항목을 검사해 기동 시점에 실패시키도록 변경. 파이프라인이 값을 못 주면 보수적인 기본값을 명시적으로 채운다.",
+   "workaround": "지원 레벨을 낮춰 선언하면 일부 항목은 통과하나 기능이 제한됨.",
+   "log_excerpt": "hal: static metadata entries=142\nITS: missing ANDROID_SENSOR_INFO_PHYSICAL_SIZE\nCTS: 17 tests failed (metadata absent)"
+  },
+  {
+   "id": "F15",
+   "family": "libcamera Android HAL",
+   "summary": "[{chip}] 요청 취소 후에도 결과 콜백이 도착해 프레임워크가 상태 불일치로 오류 보고",
+   "symptom": "세션을 정리하는 중에 이미 취소한 요청의 결과가 뒤늦게 올라와 프레임워크가 오류를 기록합니다. 다음 세션 열기가 느려집니다.",
+   "repro": [
+    "연속 촬영 중 세션 정리 호출",
+    "정리 완료 직후 결과 콜백 관찰",
+    "요청 번호 대조"
+   ],
+   "severity": "Major",
+   "category": "Request Pipeline",
+   "root_cause": "정리 절차가 파이프라인에 취소를 지시한 뒤 진행 중 요청의 완료를 기다리지 않고 즉시 반환한다. 이후 도착한 결과가 이미 정리된 세션 컨텍스트를 참조해 프레임워크 기대와 어긋났다. 정리의 완료 조건이 정의되지 않은 것이 원인.",
+   "resolution": "정리 절차가 진행 중 요청의 종료를 모두 확인한 뒤 반환하도록 하고, 취소된 요청은 결과 대신 오류 알림으로 일관되게 종결. 정리 전후 미결 요청 수를 검증하는 시험 추가.",
+   "workaround": "세션 정리 후 짧은 지연을 두고 다음 세션을 열면 완화.",
+   "log_excerpt": "hal: flush() returned, inflight=3\nhal: result for request 512 after flush\nCameraService: Unexpected result for canceled request 512"
+  },
+  {
+   "id": "F16",
+   "family": "libcamera Android HAL",
+   "summary": "[{chip}] 소프트웨어 처리 경로에서 30fps 유지 실패로 프리뷰 끊김",
+   "symptom": "프리뷰가 20fps 내외로 떨어지고 움직임이 끊겨 보입니다. 해상도를 낮추면 개선됩니다.",
+   "repro": [
+    "1080p 프리뷰 고정",
+    "처리 스레드 점유율 측정",
+    "해상도별 프레임률 비교"
+   ],
+   "severity": "Major",
+   "category": "Performance",
+   "root_cause": "하드웨어 처리 블록이 없는 구성에서 디베이어·색보정을 단일 스레드 CPU 경로로 수행한다. 해상도가 올라가면 프레임당 처리 시간이 프레임 간격을 넘어서 파이프라인이 밀린다. 소프트웨어 경로의 처리량 한계가 지원 해상도 광고에 반영되지 않은 것이 원인.",
+   "resolution": "처리 경로를 타일 단위로 병렬화하고, 측정된 처리량을 근거로 광고하는 최대 프레임률을 해상도별로 조정. 처리 지연이 기준을 넘으면 프레임을 건너뛰되 타임스탬프 일관성은 유지.",
+   "workaround": "프리뷰 해상도를 720p로 낮추면 30fps 유지.",
+   "log_excerpt": "softISP: debayer 21.4ms + ccm 9.8ms per frame\npipeline: frame interval 33ms, processing 31.2ms\nstats: fps 19.8 (target 30)"
+  },
+  {
+   "id": "F17",
+   "family": "ChromeOS Camera HAL",
+   "summary": "[{chip}] 절전 복귀 후 카메라 서비스 연결이 끊긴 채 복구되지 않음",
+   "symptom": "노트북을 덮었다 열면 카메라가 동작하지 않고, 앱에서 장치를 찾을 수 없다고 나옵니다. 재로그인하면 복구됩니다.",
+   "repro": [
+    "카메라 사용 중 절전 진입",
+    "복귀 후 즉시 카메라 앱 실행",
+    "서비스 연결 상태 확인"
+   ],
+   "severity": "Critical",
+   "category": "HAL Interface",
+   "root_cause": "절전 진입 시 서비스 측 연결이 끊기는데, 클라이언트가 연결 해제를 감지하고 재연결하는 경로가 없다. 클라이언트는 죽은 연결을 계속 유효하다고 보고 요청을 보내 응답을 받지 못했다. 연결 수명주기 관리가 한쪽에만 있던 것이 원인.",
+   "resolution": "연결 해제 알림을 구독해 즉시 상태를 무효화하고, 다음 요청 시 재연결하도록 클라이언트에 복구 경로를 추가. 절전/복귀 반복 시험을 자동화에 포함.",
+   "workaround": "카메라 서비스를 수동 재시작하거나 재로그인.",
+   "log_excerpt": "cros-camera: mojo connection error, pipe closed\nclient: using cached remote (stale)\nclient: GetCameraInfo no response after 3000ms"
+  },
+  {
+   "id": "F18",
+   "family": "ChromeOS Camera HAL",
+   "summary": "[{chip}] 특정 웹캠에서 MJPEG 디코딩 실패로 첫 프레임 이후 화면 정지",
+   "symptom": "일부 외장 웹캠에서 첫 프레임만 보이고 이후 화면이 멈춥니다. 다른 웹캠은 정상입니다.",
+   "repro": [
+    "해당 모델 웹캠 연결",
+    "1280x720 30fps 요청",
+    "프레임 헤더 덤프 확인"
+   ],
+   "severity": "Major",
+   "category": "Sensor Driver",
+   "root_cause": "해당 장치가 표준과 다르게 허프만 테이블을 첫 프레임에만 싣고 이후 프레임에서는 생략한다. 디코더가 프레임마다 완전한 헤더를 기대해 두 번째 프레임부터 디코딩에 실패했다. 장치 편차를 흡수하는 경로가 없던 것이 원인.",
+   "resolution": "첫 프레임에서 확보한 테이블을 보관해 헤더가 없는 후속 프레임에 주입하도록 디코딩 경로를 보완하고, 해당 동작이 필요한 장치를 식별 목록으로 관리.",
+   "workaround": "해당 웹캠을 비압축 포맷으로 강제하면 동작하나 프레임률이 낮아짐.",
+   "log_excerpt": "usb_hal: frame 0 decoded ok (huffman present)\nusb_hal: frame 1 decode error: no huffman table\nusb_hal: stream stalled, 0 frames in 2000ms"
+  },
+  {
+   "id": "F19",
+   "family": "Generic V4L2 HAL",
+   "summary": "[{chip}] 버퍼 큐 깊이 부족으로 고부하 시 프레임 유실",
+   "symptom": "시스템 부하가 높을 때 초당 수 프레임이 사라지고 로그에 버퍼 부족 경고가 남습니다.",
+   "repro": [
+    "CPU 부하 도구 실행 중 프리뷰",
+    "큐 깊이별 유실률 비교",
+    "드라이버 통계 확인"
+   ],
+   "severity": "Major",
+   "category": "Buffer Management",
+   "root_cause": "큐에 상주시키는 버퍼 수를 최소값으로 잡아, 소비자가 잠시 지연되면 드라이버가 채울 빈 버퍼를 얻지 못해 프레임을 버린다. 여유 버퍼가 없는 구성이 부하에 취약했던 것이 원인.",
+   "resolution": "큐 깊이를 프레임률과 소비자 지연 분포를 근거로 산정해 늘리고, 빈 버퍼 고갈 횟수를 지표로 노출해 회귀를 감지. 메모리 제약 기기에서는 해상도별로 깊이를 조정.",
+   "workaround": "프리뷰 해상도를 낮추면 유실이 줄어듦.",
+   "log_excerpt": "v4l2: VIDIOC_DQBUF returned EAGAIN\nv4l2: no free buffer, dropping frame (count=142)\nhal: queue depth 3, recommended >=6"
+  },
+  {
+   "id": "F20",
+   "family": "Generic V4L2 HAL",
+   "summary": "[{chip}] 지원하지 않는 프레임률 조합을 광고해 앱이 설정 실패",
+   "symptom": "앱이 목록에서 고른 프레임률로 설정하면 실패합니다. 다른 프레임률은 정상 동작합니다.",
+   "repro": [
+    "지원 프레임률 목록 조회",
+    "목록의 각 항목으로 설정 시도",
+    "실패 조합 기록"
+   ],
+   "severity": "Major",
+   "category": "Stream Config",
+   "root_cause": "HAL이 장치가 보고한 프레임률 목록을 해상도와 무관하게 합쳐서 광고한다. 실제로는 고해상도에서 높은 프레임률이 불가능한데도 조합이 가능한 것처럼 보여, 앱이 고른 조합에서 설정이 실패했다. 해상도별 제약을 잃어버린 것이 원인.",
+   "resolution": "프레임률 목록을 해상도별로 유지해 광고하고, 설정 요청을 수락 전에 해당 해상도의 목록과 대조. 광고 목록과 수락 집합의 일치를 검증하는 시험 추가.",
+   "workaround": "앱에서 낮은 해상도를 선택하면 원하는 프레임률 사용 가능.",
+   "log_excerpt": "v4l2: 1920x1080 max 15fps, 1280x720 max 60fps\nhal: advertised fps ranges [15,60] for all sizes\nhal: S_PARM 60fps at 1080p failed: EINVAL"
+  },
+  {
+   "id": "F21",
+   "family": "Emulated Camera HAL",
+   "summary": "[{chip}] 자동화 환경에서 부분 결과 순서가 뒤바뀌어 시험이 간헐 실패",
+   "symptom": "CI에서 카메라 시험이 낮은 확률로 실패합니다. 로컬에서는 재현되지 않습니다.",
+   "repro": [
+    "CI 팜에서 시험 200회 반복",
+    "부분 결과 도착 순서 기록",
+    "실패 케이스의 프레임 번호 대조"
+   ],
+   "severity": "Major",
+   "category": "Request Pipeline",
+   "root_cause": "부분 결과를 생성하는 작업이 서로 다른 스레드에서 실행되는데, 방출 순서를 보장하는 장치가 없다. 부하가 높은 환경에서만 순서가 뒤집혀 프레임워크가 규약 위반으로 처리했다. 순서 불변식이 암묵적 가정으로만 존재한 것이 원인.",
+   "resolution": "부분 결과 방출을 순번 기준 단일 지점으로 모으고, 순번 역전을 감지하면 즉시 실패로 처리해 조용한 위반을 막는다. 부하 주입 시험을 CI에 추가.",
+   "workaround": "CI 병렬도를 낮추면 재현율 감소.",
+   "log_excerpt": "emu: partial 2/3 emitted for frame 41\nemu: partial 1/3 emitted for frame 41 (out of order)\nCameraService: Received out-of-order partial result"
+  },
+  {
+   "id": "F22",
+   "family": "Emulated Camera HAL",
+   "summary": "[{chip}] 가상 디바이스에서 스트림 종료 시 드물게 교착으로 프로세스 정지",
+   "symptom": "자동화 도중 카메라 프로세스가 응답하지 않고 멈추는 경우가 드물게 발생합니다.",
+   "repro": [
+    "열기/닫기 반복 1000회",
+    "정지 시 스레드 덤프 수집",
+    "잠금 보유 관계 분석"
+   ],
+   "severity": "Critical",
+   "category": "Request Pipeline",
+   "root_cause": "스트림 종료 경로와 결과 방출 경로가 두 개의 잠금을 서로 반대 순서로 획득한다. 두 경로가 정확히 겹치는 순간에만 교착이 성립해 재현율이 매우 낮았다. 잠금 획득 순서가 문서화되지 않은 것이 원인.",
+   "resolution": "잠금 획득 순서를 하나로 정하고 두 경로 모두 그 순서를 따르도록 수정. 순서 위반을 디버그 빌드에서 검출하는 검사를 추가하고 반복 시험을 자동화에 포함.",
+   "workaround": "없음. 수정 필요.",
+   "log_excerpt": "thread-12: waiting for lock A (holds B) in closeStream\nthread-7: waiting for lock B (holds A) in emitResult\nwatchdog: no progress for 30s"
+  },
+  {
+   "id": "F23",
+   "family": "Automotive Camera HAL",
+   "summary": "[{chip}] 후방 카메라 표시까지 지연이 규정 시간을 초과",
+   "symptom": "후진 기어를 넣은 뒤 후방 화면이 나오기까지 시간이 규정보다 길어 검수에서 지적됐습니다.",
+   "repro": [
+    "콜드 상태에서 후진 기어 체결",
+    "표시까지 시간 반복 측정",
+    "단계별 소요 분해"
+   ],
+   "severity": "Blocker",
+   "category": "Performance",
+   "root_cause": "카메라 초기화가 기어 신호를 받은 뒤에 시작된다. 센서 전원 인가와 파이프라인 구성이 직렬로 수행되어 규정 시간 안에 첫 프레임을 내지 못했다. 초기화 시점 설계가 요구 시간을 고려하지 않은 것이 원인.",
+   "resolution": "차량 기동 시점에 후방 카메라를 미리 초기화해 대기 상태로 두고, 기어 신호에서는 표시만 시작하도록 변경. 전원 예열과 파이프라인 구성을 병렬화해 최악 지연을 줄임.",
+   "workaround": "없음. 규정 항목이라 수정 필요.",
+   "log_excerpt": "evs: gear reverse at t=0\nevs: sensor power+config 1180ms, first frame 1640ms\nrequirement: display within 1000ms"
+  },
+  {
+   "id": "F24",
+   "family": "Automotive Camera HAL",
+   "summary": "[{chip}] 서라운드뷰 4채널 간 동기 오차로 합성 화면 경계가 어긋남",
+   "symptom": "서라운드뷰 합성 화면에서 카메라 경계선에 물체가 끊겨 보입니다. 정지 상태에서는 덜 보이고 주행 중 심해집니다.",
+   "repro": [
+    "4채널 동시 스트리밍",
+    "채널별 타임스탬프 차이 기록",
+    "이동 물체로 경계 확인"
+   ],
+   "severity": "Critical",
+   "category": "Sync Timing",
+   "root_cause": "채널마다 독립적으로 스트리밍을 시작해 노출 시작 시점이 서로 어긋난다. 합성기는 프레임 번호만 맞추고 시각 차이를 보정하지 않아, 이동 물체에서 경계 불일치가 드러났다. 다중 채널 동기 기준이 없던 것이 원인.",
+   "resolution": "공통 동기 신호로 채널의 노출 시작을 정렬하고, 합성기는 타임스탬프가 허용 오차 안에 드는 프레임만 묶도록 변경. 오차 초과 시 해당 합성 프레임을 건너뛰고 지표로 기록.",
+   "workaround": "없음. 주행 안전에 직결되어 수정 필요.",
+   "log_excerpt": "evs: ch0 ts=12045110000 ch1 ts=12045126000\nevs: max inter-channel skew 16.2ms (limit 2ms)\ncompose: seam mismatch detected on moving object"
+  },
+  {
+   "id": "F25",
+   "family": "Qualcomm CamX HAL",
+   "summary": "[{chip}] 카메라 사용 중 프라이버시 인디케이터가 표시되지 않는 경로 존재",
+   "symptom": "특정 앱이 카메라를 쓰는 동안 화면 상단의 사용 중 표시등이 켜지지 않습니다. 일반 카메라 앱에서는 정상 표시됩니다.",
+   "repro": [
+    "해당 앱에서 카메라 열기",
+    "상태 표시줄 인디케이터 관찰",
+    "프레임워크 사용 중 이벤트 로그 확인"
+   ],
+   "severity": "Blocker",
+   "category": "Security",
+   "root_cause": "HAL 이 스트림을 시작할 때 프레임워크에 올리는 사용 중 알림이 일반 경로에만 붙어 있고, 특정 확장 경로로 세션을 여는 흐름에서는 누락됐다. 사용자에게 촬영 사실이 드러나지 않는 상태가 만들어져 프라이버시 요구사항을 위반한다.",
+   "resolution": "사용 중 알림을 세션 시작의 단일 지점으로 옮겨 모든 진입 경로가 반드시 통과하도록 하고, 알림 없이 스트림이 시작되면 디버그 빌드에서 실패시키는 검사를 추가.",
+   "workaround": "없음. 프라이버시 요구사항이라 수정 필요.",
+   "log_excerpt": "hal: session started via extension path\nframework: camera in-use notify NOT received\nprivacy: indicator suppressed for uid 10412"
+  },
+  {
+   "id": "F26",
+   "family": "MediaTek Camera HAL",
+   "summary": "[{chip}] 백그라운드 전환 후에도 카메라 스트림이 계속 유지됨",
+   "symptom": "카메라 앱을 백그라운드로 보내도 센서가 계속 동작하고 배터리가 빠르게 소모됩니다.",
+   "repro": [
+    "카메라 앱 실행 후 홈 버튼",
+    "센서 전력 상태 측정",
+    "스트림 활성 여부 확인"
+   ],
+   "severity": "Critical",
+   "category": "Security",
+   "root_cause": "프레임워크가 보낸 세션 종료 요청을 HAL 이 비동기로 큐에 넣고 즉시 성공으로 응답한다. 큐 처리가 지연되면 앱이 이미 백그라운드인데도 센서가 살아 있다. 응답 시점과 실제 정지 시점이 분리된 것이 원인이며, 사용자 관점에서는 꺼졌다고 알린 뒤에도 촬영이 계속되는 상태다.",
+   "resolution": "세션 종료를 동기 완료로 바꾸고, 센서 정지 확인 후에만 성공을 반환. 종료 지연 시간을 지표로 노출해 회귀를 감지.",
+   "workaround": "앱을 완전히 종료하면 즉시 정지.",
+   "log_excerpt": "framework: close() returned success at t=0ms\nsensor: streaming still active at t=2400ms\npower: camera rail 180mA in background"
+  },
+  {
+   "id": "F27",
+   "family": "Automotive Camera HAL",
+   "summary": "[{chip}] 진단 모드에서 원본 프레임이 검증 없이 외부 인터페이스로 노출",
+   "symptom": "진단용 인터페이스를 통해 인증 없이 카메라 원본 프레임을 읽을 수 있습니다.",
+   "repro": [
+    "진단 포트로 접속",
+    "인증 없이 프레임 요청",
+    "응답 데이터 확인"
+   ],
+   "severity": "Blocker",
+   "category": "Security",
+   "root_cause": "개발 중 쓰던 진단 경로가 양산 빌드에서 제거되지 않았고, 접근 제어가 빌드 플래그에만 의존했다. 해당 플래그가 양산 설정에서 꺼지지 않아 인증 없는 프레임 열람이 가능했다. 보안 경계가 빌드 설정 하나에 걸려 있던 것이 원인.",
+   "resolution": "진단 경로를 양산 빌드에서 컴파일 단계부터 제외하고, 남겨야 하는 경우 서명된 요청만 허용하도록 접근 제어를 코드로 강제. 양산 이미지에 대한 노출 표면 점검을 릴리스 체크리스트에 추가.",
+   "workaround": "없음. 양산 전 반드시 수정.",
+   "log_excerpt": "diag: frame dump request from 192.168.4.21 (no auth)\nbuild: DIAG_ENABLED=1 in production config\ndiag: 1920x1080 NV12 frame served"
+  },
+  {
+   "id": "F28",
+   "family": "Exynos Camera HAL",
+   "summary": "[{chip}] 기기 회전 시 결과 메타데이터의 방향 정보가 실제와 어긋남",
+   "symptom": "기기를 세로/가로로 돌려 촬영하면 저장된 사진의 방향이 반대로 기록되는 경우가 있습니다.",
+   "repro": [
+    "회전 직후 즉시 촬영",
+    "저장 파일의 방향 정보 확인",
+    "회전 속도를 바꿔 반복"
+   ],
+   "severity": "Major",
+   "category": "Metadata",
+   "root_cause": "방향 값을 요청 시점이 아니라 결과 생성 시점의 센서 값으로 채운다. 회전 직후에는 두 시점 사이에 방향이 바뀌어 있어, 실제 촬영된 프레임과 기록된 방향이 서로 다른 순간을 가리킨다. 메타데이터는 해당 프레임의 상태를 기술해야 한다는 원칙이 지켜지지 않은 것.",
+   "resolution": "방향 값을 요청 접수 시점에 고정해 해당 요청의 결과에 그대로 싣도록 변경. 요청과 결과의 방향 일치를 검증하는 시험을 추가.",
+   "workaround": "회전 후 잠시 기다렸다 촬영하면 일치.",
+   "log_excerpt": "request 220: orientation=90 at submit\nresult 220: orientation=0 (read at completion)\nexif: Orientation tag mismatch with frame"
+  },
+  {
+   "id": "F29",
+   "family": "libcamera Android HAL",
+   "summary": "[{chip}] 지원하지 않는 제어 값을 광고해 앱이 설정 후 무시됨",
+   "symptom": "앱이 목록에 있는 장면 모드를 설정해도 아무 변화가 없고, 결과 메타데이터에는 요청한 값이 그대로 돌아옵니다.",
+   "repro": [
+    "지원 장면 모드 목록 조회",
+    "각 모드 설정 후 결과 비교",
+    "실제 영상 변화 관찰"
+   ],
+   "severity": "Major",
+   "category": "Metadata",
+   "root_cause": "정적 메타데이터의 지원 목록을 파이프라인 능력과 무관하게 상수로 채웠다. HAL 은 요청 값을 결과에 그대로 되돌려 주기만 하고 실제로 적용하지는 않는다. 결과가 요청을 그대로 반사하므로 앱은 적용된 것으로 오해한다 — 광고와 구현이 어긋난 채 검증 수단이 없던 것이 원인.",
+   "resolution": "지원 목록을 파이프라인이 실제 구현한 값만으로 구성하고, 미구현 값을 요청받으면 결과에 실제 적용된 값을 실어 앱이 차이를 알 수 있게 한다.",
+   "workaround": "장면 모드 대신 개별 제어를 직접 지정.",
+   "log_excerpt": "static: availableSceneModes=[DISABLED,PORTRAIT,NIGHT,SPORTS]\npipeline: scene mode handler not implemented\nresult 88: sceneMode=NIGHT (echoed, not applied)"
+  },
+  {
+   "id": "F30",
+   "family": "ChromeOS Camera HAL",
+   "summary": "[{chip}] 두 카메라 동시 사용 조합을 광고했으나 실제 열기는 실패",
+   "symptom": "전면과 후면을 동시에 쓰는 앱이 두 번째 카메라를 열 때 실패합니다. 기기 사양에는 동시 사용이 가능하다고 나옵니다.",
+   "repro": [
+    "동시 사용 가능 조합 목록 조회",
+    "목록의 조합대로 두 카메라 열기",
+    "실패 코드 확인"
+   ],
+   "severity": "Major",
+   "category": "HAL Interface",
+   "root_cause": "동시 사용 조합 목록이 하드웨어 사양표에서 정적으로 생성되는데, 실제 자원 할당은 대역폭과 메모리를 함께 보고 판정한다. 두 판정 기준이 달라 광고된 조합이 실제로는 거부됐다. 광고와 수락의 근거가 하나가 아니었던 것이 원인.",
+   "resolution": "동시 사용 조합을 실제 자원 할당기가 판정한 결과로 생성하도록 통일하고, 광고 목록의 모든 조합이 실제로 열리는지 검증하는 시험을 추가.",
+   "workaround": "한 번에 한 카메라만 사용.",
+   "log_excerpt": "static: concurrent combos advertised: [(0,1),(0,2)]\nallocator: bandwidth check failed for (0,1)\nopen(1): CAMERA_IN_USE after open(0)"
+  },
+  {
+   "id": "F31",
+   "family": "Intel IPU6 HAL",
+   "summary": "[{chip}] 토치 가용성 콜백이 오지 않아 앱이 손전등 버튼을 계속 비활성으로 표시",
+   "symptom": "다른 앱이 카메라를 놓아도 손전등 버튼이 계속 눌리지 않는 상태로 남습니다. 앱을 재시작하면 정상입니다.",
+   "repro": [
+    "카메라 앱으로 카메라 점유",
+    "손전등 앱에서 버튼 상태 확인",
+    "카메라 앱 종료 후 버튼 상태 재확인"
+   ],
+   "severity": "Major",
+   "category": "HAL Interface",
+   "root_cause": "토치 사용 가능 여부가 바뀔 때 보내는 알림이 점유 시작에는 있고 해제에는 없다. 앱은 마지막으로 받은 사용 불가 상태를 계속 유지한다. 상태 전이 중 한 방향만 구현된 것이 원인.",
+   "resolution": "토치 가용성 알림을 점유 상태 변화의 양방향 모두에서 보내도록 하고, 상태 전이표를 시험으로 고정.",
+   "workaround": "손전등 앱 재시작.",
+   "log_excerpt": "torch: availability=false notified (camera opened)\ncamera: released by client\ntorch: no availability notification sent"
+  },
+  {
+   "id": "F32",
+   "family": "Rockchip Camera HAL",
+   "summary": "[{chip}] 녹화 시작 직후 영상과 소리가 어긋남",
+   "symptom": "녹화한 영상을 재생하면 처음 1초 남짓 동안 입 모양과 소리가 맞지 않습니다. 이후에는 맞습니다.",
+   "repro": [
+    "녹화 시작 후 즉시 발화",
+    "재생하며 입 모양과 소리 비교",
+    "초기 프레임 시각 기록 확인"
+   ],
+   "severity": "Major",
+   "category": "Sync Timing",
+   "root_cause": "스트림 시작 직후 몇 프레임의 시각이 실제 노출 시점이 아니라 파이프라인 준비 완료 시점으로 채워진다. 오디오는 별도 기준 시계를 쓰므로 초기 구간에서만 두 축이 어긋난다. 초기화 구간의 시각 기준이 정상 구간과 달랐던 것이 원인.",
+   "resolution": "첫 프레임부터 정상 구간과 같은 시각 기준을 쓰도록 초기화 경로를 맞추고, 기준이 안정되기 전 프레임은 내보내지 않는다.",
+   "workaround": "녹화 시작 후 1초 뒤부터 촬영.",
+   "log_excerpt": "frame 0-3: ts from pipeline-ready clock\nframe 4+: ts from sensor exposure clock\nmuxer: a/v drift 680ms at start, 0ms after"
+  },
+  {
+   "id": "F33",
+   "family": "Qualcomm CamX HAL",
+   "summary": "[{chip}] 재처리 요청이 원본과 다른 설정으로 처리되어 결과 화질이 달라짐",
+   "symptom": "저장해 둔 원본을 다시 처리하면 즉시 촬영한 결과와 화질이 다릅니다. 같은 설정을 넣었는데도 차이가 납니다.",
+   "repro": [
+    "원본 확보 후 재처리 요청",
+    "즉시 촬영 결과와 나란히 비교",
+    "적용된 설정 메타데이터 대조"
+   ],
+   "severity": "Major",
+   "category": "Request Pipeline",
+   "root_cause": "재처리 요청에 담긴 설정 중 일부를 HAL 이 무시하고 현재 세션의 최신 설정으로 대체한다. 원본을 찍을 당시의 조건이 아니라 지금 조건으로 처리되어 결과가 달라졌다. 재처리는 원본 시점의 설정을 재현해야 한다는 전제가 코드에 없던 것이 원인.",
+   "resolution": "재처리 요청의 설정을 그대로 적용하도록 경로를 분리하고, 세션 최신 값으로 덮어쓰지 않게 한다. 원본 촬영과 재처리 결과의 설정 일치를 검증하는 시험 추가.",
+   "workaround": "재처리 직전에 세션 설정을 원본과 같게 맞추면 유사한 결과.",
+   "log_excerpt": "reprocess req 44: noiseMode=HIGH_QUALITY requested\npipeline: overridden with session value FAST\nresult 44: noiseMode=FAST applied"
+  },
+  {
+   "id": "F34",
+   "family": "Exynos Camera HAL",
+   "summary": "[{chip}] 장시간 녹화 중 발열로 해상도가 낮아지는데 앱에 통보되지 않음",
+   "symptom": "오래 녹화하면 화질이 갑자기 나빠지는데 앱은 이유를 알 수 없고 사용자에게 안내하지 못합니다.",
+   "repro": [
+    "4K 녹화 20분 이상 지속",
+    "화질 변화 시점 기록",
+    "앱이 받는 상태 알림 확인"
+   ],
+   "severity": "Major",
+   "category": "Performance",
+   "root_cause": "온도가 기준을 넘으면 HAL 이 내부적으로 처리 해상도를 낮추는데, 이 사실을 결과 메타데이터나 상태 알림으로 올리지 않는다. 앱은 품질 저하를 관측만 할 뿐 원인을 알 수 없어 사용자에게 안내할 수 없다. 내부 적응이 관측 가능하게 설계되지 않은 것이 원인.",
+   "resolution": "열 조절로 처리 품질을 낮출 때 그 사실과 단계를 결과 메타데이터에 싣고 상태 알림으로도 보낸다. 앱이 안내 문구를 띄울 수 있게 한다.",
+   "workaround": "없음. 앱에서 원인을 알 방법이 없다.",
+   "log_excerpt": "thermal: level 3, internal downscale 3840->1920\nmetadata: no thermal field published\napp: observed quality drop, cause unknown"
+  },
+  {
+   "id": "F35",
+   "family": "Generic V4L2 HAL",
+   "summary": "[{chip}] 버퍼 용도 플래그를 좁게 잡아 소비자가 프레임을 읽지 못함",
+   "symptom": "특정 앱에서 프리뷰가 검게 나옵니다. 다른 앱에서는 같은 카메라가 정상입니다.",
+   "repro": [
+    "해당 앱으로 프리뷰 시작",
+    "버퍼 용도 플래그 덤프",
+    "정상 앱과 플래그 비교"
+   ],
+   "severity": "Major",
+   "category": "Stream Config",
+   "root_cause": "HAL 이 버퍼를 할당할 때 자신이 쓸 용도만 플래그에 넣고, 소비자가 요구한 용도를 합치지 않는다. 소비자가 그 버퍼를 읽을 권한을 얻지 못해 화면이 비었다. 버퍼 용도는 생산자와 소비자의 합집합이어야 한다는 규약이 지켜지지 않은 것.",
+   "resolution": "스트림 구성 시 소비자가 전달한 용도 플래그를 HAL 용도와 합쳐 할당하도록 수정하고, 합치기 누락을 검출하는 검사를 추가.",
+   "workaround": "없음. 앱 조합에 따라 재현.",
+   "log_excerpt": "stream 0: consumer usage requested 0x900\nhal: allocated with usage 0x100 (hal only)\nconsumer: lock failed, rendering black"
+  },
+  {
+   "id": "F36",
+   "family": "MediaTek Camera HAL",
+   "summary": "[{chip}] 특정 센서 모드에서 첫 프레임에 이전 노출값이 적용되어 밝기가 튐",
+   "symptom": "촬영 모드를 바꾼 직후 첫 장면이 지나치게 밝거나 어둡게 나옵니다. 두 번째 프레임부터는 정상입니다.",
+   "repro": [
+    "밝기 차이가 큰 두 모드를 번갈아 전환",
+    "전환 직후 첫 프레임 저장",
+    "노출값 메타데이터 확인"
+   ],
+   "severity": "Minor",
+   "category": "Sensor Driver",
+   "root_cause": "센서 모드를 바꿀 때 노출 설정을 새 모드의 첫 프레임에 반영하려면 정해진 프레임 수만큼 앞서 써야 하는데, 전환 경로에서는 그 선반영이 생략된다. 첫 프레임만 이전 모드의 노출로 촬영된다. 모드 전환이 정상 구간과 다른 경로를 타면서 규칙이 빠진 것이 원인.",
+   "resolution": "모드 전환 경로도 정상 구간과 같은 선반영 규칙을 따르도록 통일하고, 전환 직후 프레임의 노출값 일치를 시험으로 검증.",
+   "workaround": "전환 후 첫 프레임을 버리면 사용자에게는 드러나지 않음.",
+   "log_excerpt": "mode switch: 4K30 -> 1080p60\nframe 0: exposure from previous mode (33ms)\nframe 1: exposure applied correctly (16ms)"
+  }
+ ]
+}

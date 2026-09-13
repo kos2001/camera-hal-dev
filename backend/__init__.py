@@ -1,0 +1,1 @@
+"""camhal-sim HTTP API."""

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "camhal-sim"
+version = "0.1.0"
+description = "Camera HAL3 discrete-event simulator with fault injection (camera-hal-analysis scenarios)"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+camhal-sim = "camhal_sim.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["camhal_sim*"]
+
+[tool.setuptools.package-data]
+camhal_sim = ["data/*.json"]

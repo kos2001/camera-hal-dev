@@ -30,6 +30,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if mode == "auth":
             if self.path.startswith("/oauth2/auth"):
+                if self.headers.get("Authorization") or self.headers.get("X-Forwarded-Access-Token"):
+                    self.send_response(400)
+                    self.end_headers()
+                    return
                 authorized = "demo=ok" in self.headers.get("Cookie", "")
                 self.send_response(202 if authorized else 401)
                 if authorized:

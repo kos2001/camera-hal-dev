@@ -15,6 +15,7 @@ export function HistoryPage({ selected, onSelect, onClear }: {
   const [listError, setListError] = useState<string | null>(null)
   const [runError, setRunError] = useState<string | null>(null)
   const [listBusy, setListBusy] = useState(true)
+  const [listRevision, setListRevision] = useState(0)
   const [moreBusy, setMoreBusy] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [nextCursor, setNextCursor] = useState<number | undefined>()
@@ -36,7 +37,13 @@ export function HistoryPage({ selected, onSelect, onClear }: {
       if (active) setListBusy(false)
     })
     return () => { active = false }
-  }, [])
+  }, [listRevision])
+
+  function retryList() {
+    setListError(null)
+    setListBusy(true)
+    setListRevision((current) => current + 1)
+  }
 
   useEffect(() => {
     if (!selected) {
@@ -60,7 +67,7 @@ export function HistoryPage({ selected, onSelect, onClear }: {
   }, [selected])
 
   async function loadMore() {
-    if (nextCursor === undefined || moreBusy) return
+    if (nextCursor === undefined || moreBusy || listBusy) return
     setMoreBusy(true)
     setListError(null)
     try {
@@ -127,6 +134,7 @@ export function HistoryPage({ selected, onSelect, onClear }: {
         <div className="min-h-0 flex-1 overflow-auto p-1.5">
           {listBusy && <div className="p-3"><Spinner label="기록 불러오는 중…" /></div>}
           <ErrorBox error={listError} />
+          {listError && <button className="btn-ghost m-2" onClick={retryList}>목록 다시 시도</button>}
           {!listBusy && !listError && runs.length === 0 && !hasMore && <p className="p-3 text-sm text-stone-500">저장된 실행이 없습니다.</p>}
           <ul>
             {runs.map((item) => (
@@ -144,7 +152,7 @@ export function HistoryPage({ selected, onSelect, onClear }: {
             ))}
           </ul>
           {hasMore && (
-            <button className="btn-ghost mt-2 w-full" disabled={moreBusy} onClick={loadMore}>
+            <button className="btn-ghost mt-2 w-full" disabled={moreBusy || listBusy} onClick={loadMore}>
               {moreBusy ? <Spinner label="더 불러오는 중…" /> : '이전 기록 더 보기'}
             </button>
           )}

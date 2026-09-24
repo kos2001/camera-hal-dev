@@ -57,8 +57,18 @@ from .request_limits import RequestSizeMiddleware
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "web" / "dist"
-MAX_RUNS = 1000
-MAX_RUNS_PER_OWNER = 200
+def read_run_limits() -> tuple[int, int]:
+    try:
+        total = int(os.getenv("CAMHAL_MAX_RUNS", "1000"))
+        per_owner = int(os.getenv("CAMHAL_MAX_RUNS_PER_OWNER", "200"))
+    except ValueError as exc:
+        raise ValueError("CAMHAL_MAX_RUNS and CAMHAL_MAX_RUNS_PER_OWNER must be integers") from exc
+    if total < 1 or per_owner < 1 or per_owner > total:
+        raise ValueError("Run limits must be positive and per-owner limit must not exceed total")
+    return total, per_owner
+
+
+MAX_RUNS, MAX_RUNS_PER_OWNER = read_run_limits()
 MIN_FREE_BYTES = 64 * 1024 * 1024
 MAX_SEED = 2**31 - 1
 DB_PATH = Path(os.environ.get("CAMHAL_DB_PATH", str(ROOT / "data" / "runs.sqlite3")))

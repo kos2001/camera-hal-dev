@@ -24,6 +24,7 @@ def config() -> dict:
                 "CAMHAL_OIDC_ISSUER": "https://id.camhal.test/realms/camhal",
                 "CAMHAL_OIDC_JWKS_URL": "https://id.camhal.test/keys",
                 "CAMHAL_OIDC_AUDIENCE": "camhal-api",
+                "CAMHAL_MAX_RUNS": "10000", "CAMHAL_MAX_RUNS_PER_OWNER": "200",
             }},
             "oauth2-proxy": {"environment": {
                 "OAUTH2_PROXY_OIDC_ISSUER_URL": "https://id.camhal.test/realms/camhal",
@@ -80,10 +81,12 @@ class ProductionPreflightTest(unittest.TestCase):
             oauth["OAUTH2_PROXY_REDIRECT_URL"] = "https://camhal.example.com/oauth2/callback"
             oauth["OAUTH2_PROXY_CLIENT_SECRET"] = "replace-with-provider-client-secret"
             oauth["OAUTH2_PROXY_COOKIE_SECRET"] = "replace-with-random-base64-32-byte-secret"
+            app["CAMHAL_MAX_RUNS_PER_OWNER"] = "20000"
             errors = validate(broken, Path(tmp))
             self.assertTrue(any("예시 도메인" in error for error in errors))
             self.assertTrue(any("CAMHAL_COOKIE_SECRET" in error for error in errors))
             self.assertTrue(any("TLS 인증서와 개인 키" in error for error in errors))
+            self.assertTrue(any("실행 기록 한도" in error for error in errors))
 
 
 if __name__ == "__main__":

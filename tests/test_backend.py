@@ -16,7 +16,7 @@ try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         from fastapi.testclient import TestClient
-    from backend.app import MAX_ACTIVE_RUNS, RunStore, _run_slots, _sweep_lock, app
+    from backend.app import MAX_ACTIVE_RUNS, RunStore, _run_slots, _sweep_lock, app, read_run_limits
     from camhal_sim.runner import run_fault
 except ImportError:  # 서버 의존성 미설치 환경
     TestClient = None
@@ -38,6 +38,13 @@ class BackendTest(unittest.TestCase):
         self.assertEqual(len(cat["platforms"]), 10)
         self.assertEqual(len(cat["categories"]), 10)
         self.assertTrue(cat["checkers"])
+
+    def test_run_limits_are_configurable_and_validated(self):
+        with patch.dict("os.environ", {"CAMHAL_MAX_RUNS": "5000", "CAMHAL_MAX_RUNS_PER_OWNER": "100"}):
+            self.assertEqual(read_run_limits(), (5000, 100))
+        with patch.dict("os.environ", {"CAMHAL_MAX_RUNS": "1", "CAMHAL_MAX_RUNS_PER_OWNER": "2"}):
+            with self.assertRaises(ValueError):
+                read_run_limits()
 
     def test_html_security_policy_keeps_scripts_out_of_reports(self):
         home = self.c.get("/")

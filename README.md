@@ -79,7 +79,7 @@ GitHub Actions CI는 Python 테스트, 프론트엔드 빌드, 컨테이너 빌�
 
 실행 결과(요약, 사건, 이슈 JSON, HTML 리포트)는 기본적으로 `data/runs.sqlite3`에 저장된다.
 새 실행 데이터는 압축 저장하고 기존 비압축 기록도 읽는다. 서버를 재시작해도 조회할 수 있으며
-전체 최대 1,000건, 사용자당 최대 200건을 보관한다. 저장 경로를 바꾸려면
+기본값은 전체 최대 1,000건, 사용자당 최대 200건이며 운영 환경에서 두 한도를 설정할 수 있다. 저장 경로를 바꾸려면
 `CAMHAL_DB_PATH=/영구/볼륨/runs.sqlite3 bash scripts/serve.sh`로 실행한다.
 운영 중 백업은 `python3 scripts/backup_runs.py --db data/runs.sqlite3 /백업/경로/runs.sqlite3`로
 만든다. 기존 대상 파일은 덮어쓰지 않고 복사본의 무결성을 확인한다. 데이터 디렉터리는

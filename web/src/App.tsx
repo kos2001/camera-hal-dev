@@ -33,6 +33,11 @@ export default function App() {
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const loadCatalog = () => {
+    setError(null)
+    api.catalog().then(setCatalog).catch((e) => setError(`카탈로그를 불러오지 못했습니다: ${e.message}`))
+  }
+
   useEffect(() => {
     const onHash = () => setRoute(parseHash())
     window.addEventListener('hashchange', onHash)
@@ -40,7 +45,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    api.catalog().then(setCatalog).catch((e) => setError(`백엔드에 연결할 수 없습니다: ${e.message}`))
+    loadCatalog()
   }, [])
 
   const go = (page: Page, arg?: string) => {
@@ -74,7 +79,10 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-[1400px] px-4 py-4">
-        {error && <ErrorBox error={error} />}
+        {error && <div className="space-y-2">
+          <ErrorBox error={error} />
+          <button className="btn-ghost" onClick={loadCatalog}>다시 시도</button>
+        </div>}
         {!catalog && !error && <div className="py-20 text-center"><Spinner label="카탈로그 불러오는 중…" /></div>}
         {catalog && route.page === 'faults' && <FaultsPage catalog={catalog} selected={selectedFault} onSelect={(id) => go('faults', id)} />}
         {catalog && route.page === 'run' && <PlaygroundPage catalog={catalog} />}

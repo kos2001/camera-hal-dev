@@ -16,10 +16,20 @@ from camhal_sim.runner import run_fault
 from scripts.backup_runs import backup
 from scripts.check_production_backup import check_backup
 from scripts.export_production_backup import export_backup
+from scripts.prepare_restore_volume import prepare_restore_volume
 from scripts.scheduled_backup import prune_backups, scheduled_backup
 
 
 class BackupTest(unittest.TestCase):
+    def test_restore_prepare_rejects_invalid_snapshot_before_creating_volume(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            invalid = Path(tmp) / "invalid.sqlite3"
+            invalid.write_bytes(b"not a backup")
+            with patch("scripts.prepare_restore_volume.subprocess.run") as docker:
+                with self.assertRaises(sqlite3.DatabaseError):
+                    prepare_restore_volume(invalid)
+                docker.assert_not_called()
+
     def test_backup_monitor_checks_latest_snapshot_and_rejects_stale_or_corrupt(self):
         now = datetime(2026, 9, 24, 12, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as tmp:

@@ -8,6 +8,7 @@ RUN npm run build
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    CAMHAL_ENV=production \
     CAMHAL_DB_PATH=/var/lib/camhal/runs.sqlite3
 WORKDIR /app
 COPY pyproject.toml requirements-server.lock ./

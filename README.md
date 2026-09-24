@@ -98,7 +98,9 @@ curl http://127.0.0.1:8010/api/ready
 
 `compose.yaml`은 단일 인스턴스를 비관리자 권한과 읽기 전용 루트 파일 시스템으로 실행하고,
 실행 결과를 `camhal-data` 볼륨에 보관한다. 호스트 포트는 기본적으로 `127.0.0.1`에만
-열린다. 공개 배포용 `compose.production.yaml`은 Nginx HTTPS, OAuth2 Proxy 로그인,
+열리며 개발용 인증 모드를 명시한다. 컨테이너 이미지를 Compose 없이 실행하면 기본적으로
+운영 인증 설정을 요구하므로 OIDC 설정 없이 API가 시작되지 않는다.
+공개 배포용 `compose.production.yaml`은 Nginx HTTPS, OAuth2 Proxy 로그인,
 앱의 OIDC 토큰 검증을 연결한다. 도메인·TLS 인증서·OIDC 공급자 설정 방법은
 [운영 배포 안내](docs/production.md)에 정리했다. 여러 인스턴스로 확장하려면
 공유 가능한 저장소와 실행 작업 큐가 먼저 필요하다.

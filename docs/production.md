@@ -47,6 +47,10 @@ Nginx는 로그인 세션에서 얻은 액세스 토큰으로 업스트림 `Auth
 audience·만료를 다시 검증한다. OAuth2 Proxy의 [Nginx 연동 방식](https://oauth2-proxy.github.io/oauth2-proxy/configuration/integrations/nginx/)을
 따르며, Redis가 재시작되면 세션은 사라져 사용자가 다시 로그인한다. 외부 TLS 인증서
 갱신과 Redis 가용성·복구는 배포 환경에서 운영해야 한다.
+Nginx는 브라우저가 보낸 `X-Forwarded-For`, `X-Forwarded-Host`,
+`X-Forwarded-Proto`, `X-Forwarded-Uri`를 연결 주소와 요청 경로로 다시 설정한다.
+앞에 로드 밸런서가 있다면 그 장비의 신뢰할 수 있는 주소만
+Nginx `real_ip` 설정에 등록해야 실제 클라이언트별 요청 제한이 적용된다.
 `bash scripts/smoke_gateway.sh camhal-sim:local`은 임시 인증 서버로 비로그인 응답과
 토큰 헤더 교체를 검증한다. 실제 OIDC 공급자를 통한 로그인은 위 배포 절차로 별도 확인한다.
 `bash scripts/smoke_oidc.sh camhal-sim:local`은 테스트용 OIDC 발급자를 띄워 브라우저

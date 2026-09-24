@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-server.lock
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-server.lock
+      - name: Check Python dependencies
+        run: python -m pip check
+      - name: Audit pinned Python dependencies
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: requirements-server.lock
+          no-deps: true
+      - name: Python tests
+        run: python -m unittest discover -s tests -q
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+      - name: Audit web dependencies
+        run: npm audit --audit-level=high
+        working-directory: web
+      - name: Build web app
+        run: npm run build
+        working-directory: web
+      - name: Build container image
+        run: docker build -t camhal-sim:ci .
+      - name: Verify gateway authentication boundary
+        run: bash scripts/smoke_gateway.sh camhal-sim:ci
+      - name: Verify production Compose login and tenant isolation
+        run: python scripts/smoke_production_compose.py camhal-sim:ci
+      - name: Verify production backup export and restore
+        run: python scripts/smoke_backup.py camhal-sim:ci

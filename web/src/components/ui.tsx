@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { Severity } from '../api'
+import { AUTH_REQUIRED_MESSAGE, loginUrl, type Severity } from '../api'
 
 const SEV_STYLE: Record<Severity, string> = {
   Blocker: 'bg-red-600 text-white',
@@ -72,9 +72,11 @@ export function Spinner({ label }: { label?: string }) {
 
 export function ErrorBox({ error }: { error: string | null }) {
   if (!error) return null
+  const needsLogin = error.includes(AUTH_REQUIRED_MESSAGE)
   return (
-    <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+    <div role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
       {error}
+      {needsLogin && <a className="ml-2 font-semibold underline" href={loginUrl()}>다시 로그인</a>}
     </div>
   )
 }

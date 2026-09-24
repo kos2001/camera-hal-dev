@@ -1,0 +1,9 @@
+.git
+.venv
+data
+out
+web/node_modules
+web/.npm-cache
+web/dist
+__pycache__
+*.pyc

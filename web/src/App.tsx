@@ -3,10 +3,11 @@ import { api, type Catalog } from './api'
 import { ErrorBox, Spinner } from './components/ui'
 import { CatalogPage } from './pages/CatalogPage'
 import { FaultsPage } from './pages/FaultsPage'
+import { HistoryPage } from './pages/HistoryPage'
 import { PlaygroundPage } from './pages/PlaygroundPage'
 import { SweepPage } from './pages/SweepPage'
 
-type Page = 'faults' | 'run' | 'sweep' | 'catalog'
+type Page = 'faults' | 'run' | 'sweep' | 'history' | 'catalog'
 
 interface Route {
   page: Page
@@ -15,7 +16,7 @@ interface Route {
 
 function parseHash(): Route {
   const [, page, arg] = window.location.hash.replace(/^#/, '').split('/')
-  const valid: Page[] = ['faults', 'run', 'sweep', 'catalog']
+  const valid: Page[] = ['faults', 'run', 'sweep', 'history', 'catalog']
   return { page: valid.includes(page as Page) ? (page as Page) : 'faults', arg: arg ?? null }
 }
 
@@ -23,6 +24,7 @@ const NAV: { page: Page; label: string }[] = [
   { page: 'faults', label: '결함 시나리오' },
   { page: 'run', label: '자유 실행' },
   { page: 'sweep', label: '검증 매트릭스' },
+  { page: 'history', label: '실행 기록' },
   { page: 'catalog', label: '카탈로그' },
 ]
 
@@ -77,6 +79,7 @@ export default function App() {
         {catalog && route.page === 'faults' && <FaultsPage catalog={catalog} selected={selectedFault} onSelect={(id) => go('faults', id)} />}
         {catalog && route.page === 'run' && <PlaygroundPage catalog={catalog} />}
         {catalog && route.page === 'sweep' && <SweepPage catalog={catalog} onOpenFault={(id) => go('faults', id)} />}
+        {catalog && route.page === 'history' && <HistoryPage selected={route.arg} onSelect={(id) => go('history', id)} onClear={() => go('history')} />}
         {catalog && route.page === 'catalog' && <CatalogPage catalog={catalog} />}
       </main>
     </div>

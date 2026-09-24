@@ -162,11 +162,27 @@ Python 잠금 파일의 갱신은 위 절차로 별도 검토한다.
   python3 scripts/check_production_backup.py /mnt/camhal-backups --max-age-hours 26
   ```
 
-  복원할 때는 서버를 중지한 뒤 별도 볼륨에서 백업 파일을 열어 기록 조회를 확인하고
-  교체한다. 호스트 백업도 같은 물리 디스크에만 남기지 말고 별도 저장소로 복제한다.
-  백업 주기·보관 기간·복원 훈련은 운영 환경의 데이터 정책에 맞춰 정해야 한다.
-  `python3 scripts/smoke_backup.py camhal-sim:local`은 임시 Compose 서비스에서
-  백업 내보내기·복원 조회·볼륨 임시 파일 정리를 검증한다.
+  복원할 때는 복원할 시점의 백업을 정하고 신규 쓰기를 중지한다. 백업 이후의 실행
+  기록은 복원 볼륨에 들어 있지 않다. 아래 절차는 기존 볼륨을 덮어쓰지 않고 새 볼륨에
+  백업을 복사·검사한 뒤 앱을 전환한다. 백업 경로는 실제 파일로 바꾼다.
+
+  ```sh
+  docker compose --env-file .env.production -f compose.production.yaml stop nginx
+  RESTORE_VOLUME=$(python3 scripts/prepare_restore_volume.py /mnt/camhal-backups/runs-YYYYMMDDTHHMMSSZ-UUID.sqlite3)
+  export CAMHAL_RESTORE_VOLUME="$RESTORE_VOLUME"
+  docker compose --env-file .env.production -f compose.production.yaml -f deploy/restore-volume.override.yaml config >/dev/null
+  docker compose --env-file .env.production -f compose.production.yaml -f deploy/restore-volume.override.yaml up -d --no-deps camhal
+  docker compose --env-file .env.production -f compose.production.yaml -f deploy/restore-volume.override.yaml exec -T camhal python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8010/api/ready", timeout=3)'
+  docker compose --env-file .env.production -f compose.production.yaml -f deploy/restore-volume.override.yaml up -d nginx
+  ```
+
+  새 볼륨 이름과 `deploy/restore-volume.override.yaml`을 이후 모든 배포 명령에 유지하고,
+  로그인 후 실제 기록을 조회한다. 준비가 실패한 새 볼륨은 자동 삭제되지 않으므로
+  확인 후 직접 정리한다. 기존 볼륨도 보존되며, 이전 볼륨으로 돌아가기 전에 복원
+  이후의 신규 기록을 어떻게 처리할지 결정해야 한다. 호스트 백업은 같은 물리 디스크에만
+  남기지 말고 별도 저장소로 복제한다. 백업 주기·보관 기간·복원 훈련은 운영 환경의
+  데이터 정책에 맞춰 정해야 한다. `python3 scripts/smoke_backup.py camhal-sim:local`은
+  임시 Compose 서비스에서 내보내기·새 볼륨 복원·API 조회·임시 파일 정리를 검증한다.
 - 동시 실행은 프로세스당 4건, 사용자당 2건이다. 초과 요청에는 `503`과
   `Retry-After: 1`이 반환된다.
 - 컨테이너 상태 검사는 `/api/ready`로 SQLite 조회 가능 여부와 DB 페이지 한도, DB 볼륨의

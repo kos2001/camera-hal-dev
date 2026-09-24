@@ -22,6 +22,16 @@ from scripts.export_production_backup import compose_command, export_backup
 BACKUP_NAME = re.compile(r"^runs-(\d{8}T\d{6}Z)-([0-9a-f]{32})\.sqlite3$")
 
 
+def backup_timestamp(name: str) -> datetime | None:
+    match = BACKUP_NAME.fullmatch(name)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
 def prune_backups(directory: Path, retain_days: int, now: datetime) -> int:
     """Remove only expired regular files bearing this scheduler's exact name."""
     if retain_days < 1:
@@ -29,12 +39,10 @@ def prune_backups(directory: Path, retain_days: int, now: datetime) -> int:
     cutoff = now.astimezone(timezone.utc) - timedelta(days=retain_days)
     removed = 0
     for path in directory.iterdir():
-        match = BACKUP_NAME.fullmatch(path.name)
-        if not match or path.is_symlink() or not path.is_file():
+        if path.is_symlink() or not path.is_file():
             continue
-        try:
-            created = datetime.strptime(match.group(1), "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-        except ValueError:
+        created = backup_timestamp(path.name)
+        if created is None:
             continue
         if created < cutoff:
             path.unlink()

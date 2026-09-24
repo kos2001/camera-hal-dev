@@ -8,11 +8,13 @@ import sys
 import tempfile
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.app import RunStore
+from scripts.check_production_backup import check_backup
 from scripts.export_production_backup import export_backup
 
 
@@ -49,8 +51,11 @@ def main() -> None:
             subprocess.run([*command, "exec", "-T", "camhal", "python", "-c",
                             'from backend.app import store; from camhal_sim.runner import run_fault; '
                             'store.put(run_fault("F04", seed=7))'], check=True)
-            destination = root / "export.sqlite3"
+            destination = root / f"runs-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}-{uuid.uuid4().hex}.sqlite3"
             rows = export_backup(destination, command)
+            checked, checked_rows = check_backup(root, 24)
+            if checked != destination.resolve() or checked_rows != rows:
+                raise RuntimeError("Exported backup failed freshness or integrity monitoring")
             restored = RunStore(10, destination)
             try:
                 if rows != 1 or restored.count() != 1:

@@ -14,11 +14,48 @@ from unittest.mock import patch
 from backend.app import RunStore
 from camhal_sim.runner import run_fault
 from scripts.backup_runs import backup
+from scripts.check_production_backup import check_backup
 from scripts.export_production_backup import export_backup
 from scripts.scheduled_backup import prune_backups, scheduled_backup
 
 
 class BackupTest(unittest.TestCase):
+    def test_backup_monitor_checks_latest_snapshot_and_rejects_stale_or_corrupt(self):
+        now = datetime(2026, 9, 24, 12, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            source = directory / "runs.sqlite3"
+            store = RunStore(10, source)
+            store.put(run_fault("F04", seed=7))
+            recent = directory / ("runs-20260924T110000Z-" + "a" * 32 + ".sqlite3")
+            backup(source, recent)
+            self.assertEqual(check_backup(directory, 2, now), (recent.resolve(), 1))
+            with self.assertRaisesRegex(RuntimeError, "허용 지연"):
+                check_backup(directory, 1, datetime(2026, 9, 24, 13, 1, tzinfo=timezone.utc))
+
+            corrupt = directory / ("runs-20260924T120000Z-" + "b" * 32 + ".sqlite3")
+            corrupt.write_bytes(b"not a SQLite database")
+            with self.assertRaises(sqlite3.DatabaseError):
+                check_backup(directory, 2, now)
+            corrupt.unlink()
+            future = directory / ("runs-20260924T130000Z-" + "c" * 32 + ".sqlite3")
+            future.symlink_to(recent)
+            self.assertEqual(check_backup(directory, 2, now), (recent.resolve(), 1))
+            future.unlink()
+            future.write_bytes(b"not checked because the timestamp is invalid")
+            with self.assertRaisesRegex(RuntimeError, "미래"):
+                check_backup(directory, 2, now)
+            store.close()
+
+    def test_backup_monitor_requires_a_scheduled_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            (directory / "runs-20260924.sqlite3").write_bytes(b"manual")
+            with self.assertRaisesRegex(RuntimeError, "찾지 못했습니다"):
+                check_backup(directory, 24)
+            with self.assertRaises(ValueError):
+                check_backup(directory, 0)
+
     def test_scheduled_backup_prunes_only_expired_owned_files_after_export(self):
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)

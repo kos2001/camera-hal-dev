@@ -26,6 +26,7 @@ import atexit
 import json
 import logging
 import os
+import shutil
 import sqlite3
 import threading
 import time
@@ -58,6 +59,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "web" / "dist"
 MAX_RUNS = 1000
 MAX_RUNS_PER_OWNER = 200
+MIN_FREE_BYTES = 64 * 1024 * 1024
 MAX_SEED = 2**31 - 1
 DB_PATH = Path(os.environ.get("CAMHAL_DB_PATH", str(ROOT / "data" / "runs.sqlite3")))
 APP_CSP = ("default-src 'none'; script-src 'self'; style-src 'self'; "
@@ -143,6 +145,7 @@ class RunStore:
             raise ValueError("Run retention caps must be positive and owner_cap must not exceed cap")
         self.cap = cap
         self.owner_cap = cap if owner_cap is None else owner_cap
+        self.path = path
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         if path.exists() and not path.is_file():
             raise ValueError("Run database path must be a file")
@@ -287,8 +290,10 @@ class RunStore:
                 reusable = self._db.execute("PRAGMA freelist_count").fetchone()[0]
                 if pages >= limit and reusable == 0:
                     return False
+                if shutil.disk_usage(self.path.parent).free < MIN_FREE_BYTES:
+                    return False
             return True
-        except sqlite3.Error:
+        except (OSError, sqlite3.Error):
             return False
 
     def close(self) -> None:

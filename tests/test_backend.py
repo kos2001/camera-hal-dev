@@ -64,6 +64,13 @@ class BackendTest(unittest.TestCase):
                 self.assertEqual(self.c.get("/api/ready").status_code, 503)
                 self.assertEqual(self.c.get("/api/health").status_code, 200)
 
+        with patch("backend.app.shutil.disk_usage") as usage:
+            usage.return_value.free = 1
+            self.assertEqual(self.c.get("/api/ready").status_code, 503)
+            self.assertEqual(self.c.get("/api/health").status_code, 200)
+            usage.side_effect = OSError("volume unavailable")
+            self.assertEqual(self.c.get("/api/ready").status_code, 503)
+
     def test_disk_full_returns_controlled_error_without_partial_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             full = RunStore(10, Path(tmp) / "runs.sqlite3")

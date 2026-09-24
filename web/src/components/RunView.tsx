@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, type EventPage, type RunPayload, type Violation } from '../api'
 import { LineChart, Timeline, type Series } from './charts'
-import { CategoryDot, Empty, Pill, Section, SeverityBadge } from './ui'
+import { CategoryDot, Empty, ErrorBox, Pill, Section, SeverityBadge } from './ui'
 
 const PALETTE = ['#0284c7', '#db2777', '#16a34a', '#ea580c', '#7c3aed', '#0d9488']
 
@@ -26,21 +26,27 @@ export function RunView({ run }: { run: RunPayload }) {
 // --------------------------------------------------------------------------- //
 function RunHeader({ run }: { run: RunPayload }) {
   const [copied, setCopied] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
   const v = run.verdict
 
   async function exportIssue(mode: 'download' | 'copy') {
-    const issue = await api.issue(run.id)
-    const text = JSON.stringify(issue, null, 1)
-    if (mode === 'copy') {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-      return
+    setExportError(null)
+    try {
+      const issue = await api.issue(run.id)
+      const text = JSON.stringify(issue, null, 1)
+      if (mode === 'copy') {
+        await navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+        return
+      }
+      const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
+      const a = Object.assign(document.createElement('a'), { href: url, download: `${issue.key}.json` })
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (failure) {
+      setExportError(String((failure as Error).message))
     }
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
-    const a = Object.assign(document.createElement('a'), { href: url, download: `${issue.key}.json` })
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -58,11 +64,13 @@ function RunHeader({ run }: { run: RunPayload }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <a className="btn-ghost" href={`#/history/${run.id}`}>실행 기록 링크</a>
           <a className="btn-ghost" href={api.reportUrl(run.id)} target="_blank" rel="noreferrer">HTML 리포트 ↗</a>
           <button className="btn-ghost" onClick={() => exportIssue('copy')}>{copied ? '복사됨' : 'Jira 이슈 복사'}</button>
           <button className="btn-ghost" onClick={() => exportIssue('download')}>이슈 JSON ↓</button>
         </div>
       </div>
+      {exportError && <div className="mt-3"><ErrorBox error={exportError} /></div>}
       <details className="mt-3 text-sm">
         <summary className="cursor-pointer text-xs font-medium text-sky-700 dark:text-sky-400">재현 절차 {run.workload.steps.length}단계{Object.keys(run.workload.budgets).length ? ' · 요구 기준' : ''}</summary>
         <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-stone-600 dark:text-stone-300">
@@ -238,11 +246,18 @@ function EventBrowser({ run }: { run: RunPayload }) {
   const [offset, setOffset] = useState(0)
   const [page, setPage] = useState<EventPage | null>(null)
   const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     let alive = true
-    api.events(run.id, kind || null, offset, PAGE).then((p) => alive && setPage(p)).catch(() => alive && setPage(null))
+    setPage(null)
+    setError(null)
+    api.events(run.id, kind || null, offset, PAGE).then((result) => {
+      if (alive) setPage(result)
+    }).catch((failure) => {
+      if (alive) setError(String((failure as Error).message))
+    })
     return () => {
       alive = false
     }
@@ -259,6 +274,7 @@ function EventBrowser({ run }: { run: RunPayload }) {
         <p className="text-sm text-stone-500">프레임워크가 관찰한 사건(콜백·메타데이터·통계) 원본을 종류별로 조회합니다.</p>
       ) : (
         <>
+          {error && <div className="mb-3"><ErrorBox error={error} /></div>}
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <select className="input h-8" value={kind} onChange={(e) => { setKind(e.target.value); setOffset(0) }}>
               {run.timeline.lanes.map((l) => <option key={l.kind} value={l.kind}>{l.kind} ({l.count})</option>)}

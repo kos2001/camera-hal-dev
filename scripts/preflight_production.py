@@ -66,6 +66,13 @@ def validate(config: dict, cert_dir: Path) -> list[str]:
         errors.append("앱과 로그인 프록시의 OIDC 발급자가 다릅니다.")
     if not app.get("CAMHAL_OIDC_AUDIENCE"):
         errors.append("CAMHAL_OIDC_AUDIENCE가 비어 있습니다.")
+    try:
+        total_limit = int(app.get("CAMHAL_MAX_RUNS", ""))
+        owner_limit = int(app.get("CAMHAL_MAX_RUNS_PER_OWNER", ""))
+        if total_limit < 1 or not 1 <= owner_limit <= total_limit:
+            raise ValueError
+    except (TypeError, ValueError):
+        errors.append("실행 기록 한도는 양의 정수이고 사용자별 한도가 전체 한도 이하여야 합니다.")
     if "openid" not in oauth.get("OAUTH2_PROXY_SCOPE", "").split():
         errors.append("CAMHAL_OIDC_SCOPE에 openid가 필요합니다.")
     if (oauth.get("OAUTH2_PROXY_PASS_ACCESS_TOKEN") != "true" or

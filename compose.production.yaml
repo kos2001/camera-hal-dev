@@ -13,6 +13,8 @@ services:
       CAMHAL_OIDC_ISSUER: ${CAMHAL_OIDC_ISSUER:?}
       CAMHAL_OIDC_AUDIENCE: ${CAMHAL_OIDC_AUDIENCE:?}
       CAMHAL_OIDC_JWKS_URL: ${CAMHAL_OIDC_JWKS_URL:?}
+      CAMHAL_MAX_RUNS: ${CAMHAL_MAX_RUNS:-1000}
+      CAMHAL_MAX_RUNS_PER_OWNER: ${CAMHAL_MAX_RUNS_PER_OWNER:-200}
     volumes:
       - camhal-data:/var/lib/camhal
     networks:

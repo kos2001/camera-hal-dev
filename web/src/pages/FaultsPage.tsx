@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { api, type Catalog, type Fault, type RunPayload } from '../api'
 import { RunView } from '../components/RunView'
 import { CategoryDot, Empty, ErrorBox, Field, Pill, Section, SeverityBadge, Spinner } from '../components/ui'
@@ -73,6 +73,8 @@ function FaultDetail({ fault, catalog }: { fault: Fault; catalog: Catalog }) {
   async function compare() {
     setBusy(true)
     setError(null)
+    setRuns({})
+    setMode('faulty')
     try {
       const res = await api.compare(fault.id, { platform, seed })
       setRuns(res)
@@ -82,12 +84,6 @@ function FaultDetail({ fault, catalog }: { fault: Fault; catalog: Catalog }) {
       setBusy(false)
     }
   }
-
-  useEffect(() => {
-    compare()
-    // 결함 선택 시 기본 조건으로 한 번 비교 실행
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const current = runs[mode]
 
@@ -166,7 +162,9 @@ function FaultDetail({ fault, catalog }: { fault: Fault; catalog: Catalog }) {
         )}
       </Section>
 
-      {current ? <RunView key={current.id} run={current} /> : busy ? <Empty><Spinner label="시뮬레이션 실행 중…" /></Empty> : null}
+      {current ? <RunView key={current.id} run={current} /> : busy
+        ? <Empty><Spinner label="시뮬레이션 실행 중…" /></Empty>
+        : <Empty>조건을 확인한 뒤 비교 실행을 누르면 결함 주입과 수정 상태의 결과가 기록에 저장됩니다.</Empty>}
     </div>
   )
 }

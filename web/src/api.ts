@@ -55,6 +55,7 @@ export interface CheckerInfo {
 
 export interface Catalog {
   version: string
+  auth_mode: 'local' | 'oidc'
   categories: string[]
   platforms: Platform[]
   workloads: Workload[]

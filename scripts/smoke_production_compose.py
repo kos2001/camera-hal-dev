@@ -102,8 +102,8 @@ def main() -> None:
                           "-w", "%{http_code}", "https://localhost:18443/")
             if status != "200":
                 raise RuntimeError(f"Browser login returned {status}")
-            if curl("-b", str(cookies), "-o", "/dev/null", "-w", "%{http_code}",
-                    "https://localhost:18443/api/catalog") != "200":
+            catalog = json.loads(curl("-b", str(cookies), "https://localhost:18443/api/catalog"))
+            if catalog.get("auth_mode") != "oidc":
                 raise RuntimeError("Authenticated catalog request failed")
             created = json.loads(curl("-b", str(cookies), "-H", "Content-Type: application/json",
                                       "-d", '{"seed":7}',
@@ -120,7 +120,17 @@ def main() -> None:
             if curl("-b", str(other), "-o", "/dev/null", "-w", "%{http_code}",
                     f"https://localhost:18443/api/runs/{run_id}") != "404":
                 raise RuntimeError("Second user could read another user's run")
-            print("Production Compose smoke passed: startup, login, run creation, tenant isolation")
+            status = curl("-L", "-b", str(cookies), "-c", str(cookies),
+                          "-o", str(tmp / "signed-out.html"), "-w", "%{http_code} %{url_effective}",
+                          "https://localhost:18443/oauth2/sign_out?rd=%2Fsigned-out")
+            if status != "200 https://localhost:18443/signed-out":
+                raise RuntimeError(f"Sign-out did not reach its landing page: {status}")
+            if "서비스 세션이 종료되었습니다" not in (tmp / "signed-out.html").read_text():
+                raise RuntimeError("Sign-out landing page is missing")
+            if curl("-b", str(cookies), "-o", "/dev/null", "-w", "%{http_code}",
+                    "https://localhost:18443/api/catalog") != "401":
+                raise RuntimeError("Signed-out session can still access the API")
+            print("Production Compose smoke passed: startup, login, run creation, tenant isolation, sign-out")
         finally:
             subprocess.run([*command, "down", "-v"], check=False,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

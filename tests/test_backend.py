@@ -33,6 +33,7 @@ class BackendTest(unittest.TestCase):
         self.assertEqual(response.headers["Cache-Control"], "no-store")
         self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
         cat = response.json()
+        self.assertEqual(cat["auth_mode"], "local")
         self.assertEqual(len(cat["faults"]), 37)
         self.assertEqual(len(cat["platforms"]), 10)
         self.assertEqual(len(cat["categories"]), 10)

@@ -55,6 +55,10 @@ audience·만료를 다시 검증한다. OAuth2 Proxy의 [Nginx 연동 방식](h
 `python3 scripts/smoke_production_compose.py`는 실제 운영 Compose 설정을 임시로
 복사해 로컬 인증서·발급자와 격리된 포트로 기동한 뒤 같은 로그인·사용자 격리를 검증한다.
 화면에서 API가 401을 반환하면 현재 화면 경로를 보존하는 재로그인 링크를 표시한다.
+운영 화면의 “이 앱에서 로그아웃”은 OAuth2 Proxy의 `/oauth2/sign_out`으로 서비스 쿠키를
+지우고 별도 안내 페이지로 이동한다. [OAuth2 Proxy 문서](https://oauth2-proxy.github.io/oauth2-proxy/features/endpoints/#sign-out)에
+따르면 인증 제공자의 세션은 이 동작으로 종료되지 않을 수 있다. 공유 기기 운영에선
+해당 공급자의 로그아웃 절차도 설정·안내해야 한다.
 Nginx 접근 로그에는 URL 쿼리와 인증 헤더를 기록하지 않으며 OAuth2 Proxy 요청 로그도
 비활성화한다. 로그인 성공·실패 진단에는 OAuth2 Proxy 인증 로그와 앱의 요청 ID 로그를 쓴다.
 앱 화면은 외부 스크립트·스타일·API 호출을 같은 출처로 제한하는 콘텐츠 보안 정책을 쓰며,

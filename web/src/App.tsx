@@ -74,7 +74,10 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <a className="ml-auto hidden text-xs text-stone-500 hover:text-stone-800 md:inline dark:hover:text-stone-200" href="/docs" target="_blank" rel="noreferrer">API 문서 ↗</a>
+          <div className="ml-auto flex shrink-0 items-center gap-3 text-xs">
+            <a className="hidden text-stone-500 hover:text-stone-800 md:inline dark:hover:text-stone-200" href="/docs" target="_blank" rel="noreferrer">API 문서 ↗</a>
+            {catalog?.auth_mode === 'oidc' && <a className="text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white" href="/oauth2/sign_out?rd=%2Fsigned-out">이 앱에서 로그아웃</a>}
+          </div>
         </div>
       </header>
 

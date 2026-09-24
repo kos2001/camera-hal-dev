@@ -397,6 +397,7 @@ def catalog() -> dict:
     faults = all_faults()
     return {
         "version": __version__,
+        "auth_mode": auth_config.mode,
         "categories": sorted({f.category for f in faults}, key=lambda c: [f.category for f in faults].index(c)),
         "platforms": [platform_dict(p) for p in all_platforms()],
         "workloads": [workload_dict(w) for w in REGISTRY.values()],

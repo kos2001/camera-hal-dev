@@ -7,6 +7,9 @@ x-json-logging: &bounded-logs
 services:
   camhal:
     build: .
+    environment:
+      CAMHAL_ENV: development
+      CAMHAL_AUTH_MODE: local
     ports:
       - "127.0.0.1:8010:8010"
     volumes:

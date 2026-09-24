@@ -26,6 +26,8 @@ def main() -> None:
         root = Path(tmp)
         compose_file = root / "compose.yaml"
         compose_file.write_text("services:\n  camhal:\n    image: " + json.dumps(args.image) +
+                                "\n    environment:\n      CAMHAL_ENV: development"
+                                "\n      CAMHAL_AUTH_MODE: local" +
                                 "\n    volumes:\n      - data:/var/lib/camhal\nvolumes:\n  data: {}\n")
         probe = subprocess.run(["docker", "compose", "version"], check=False,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

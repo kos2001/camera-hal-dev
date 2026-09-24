@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,9 +15,51 @@ from backend.app import RunStore
 from camhal_sim.runner import run_fault
 from scripts.backup_runs import backup
 from scripts.export_production_backup import export_backup
+from scripts.scheduled_backup import prune_backups, scheduled_backup
 
 
 class BackupTest(unittest.TestCase):
+    def test_scheduled_backup_prunes_only_expired_owned_files_after_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            old = directory / ("runs-20260101T000000Z-" + "a" * 32 + ".sqlite3")
+            recent = directory / ("runs-20260923T000000Z-" + "b" * 32 + ".sqlite3")
+            manual = directory / "runs-20260101.sqlite3"
+            link = directory / ("runs-20260101T000000Z-" + "c" * 32 + ".sqlite3")
+            for path in (old, recent, manual):
+                path.write_bytes(b"test")
+            link.symlink_to(manual)
+            now = datetime(2026, 9, 24, tzinfo=timezone.utc)
+
+            def fake_export(destination, _command):
+                destination.write_bytes(b"snapshot")
+                return 3
+
+            with patch("scripts.scheduled_backup.export_backup", side_effect=fake_export), \
+                 patch("scripts.scheduled_backup.compose_command", return_value=["docker-compose"]), \
+                 patch("scripts.scheduled_backup.ROOT", directory):
+                (directory / ".env.production").write_text("test")
+                destination, rows, removed = scheduled_backup(directory, 7, now)
+            self.assertEqual((rows, removed), (3, 1))
+            self.assertTrue(destination.is_file())
+            self.assertFalse(old.exists())
+            for path in (recent, manual, link):
+                self.assertTrue(path.is_symlink() or path.is_file())
+            self.assertEqual(prune_backups(directory, 7, now), 0)
+
+    def test_scheduled_backup_does_not_prune_after_failed_export(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = Path(tmp)
+            old = directory / ("runs-20260101T000000Z-" + "a" * 32 + ".sqlite3")
+            old.write_bytes(b"test")
+            (directory / ".env.production").write_text("test")
+            with patch("scripts.scheduled_backup.export_backup", side_effect=OSError("copy failed")), \
+                 patch("scripts.scheduled_backup.compose_command", return_value=["docker-compose"]), \
+                 patch("scripts.scheduled_backup.ROOT", directory):
+                with self.assertRaisesRegex(OSError, "copy failed"):
+                    scheduled_backup(directory, 7, datetime(2026, 9, 24, tzinfo=timezone.utc))
+            self.assertTrue(old.exists())
+
     def test_export_verifies_host_copy_and_removes_volume_temporary(self):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "runs.sqlite3"

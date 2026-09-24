@@ -130,6 +130,23 @@ Python 잠금 파일의 갱신은 위 절차로 별도 검토한다.
   python3 scripts/export_production_backup.py ./backups/runs-YYYYMMDD.sqlite3
   ```
 
+  반복 백업에는 `scripts/scheduled_backup.py`를 스케줄러에서 실행한다. 백업 대상
+  디렉터리와 `--retain-days`는 운영 정책에 맞게 명시해야 하며, 디렉터리가 없으면
+  실패한다. 예를 들어 별도 저장소가 `/mnt/camhal-backups`에 마운트되고 30일 보관
+  정책을 정했다면 다음 명령을 등록할 수 있다. 마운트가 필요한 환경에서는 실행 전에
+  `mountpoint -q /mnt/camhal-backups`로 마운트 상태를 확인해야 한다.
+
+  ```sh
+  cd /srv/camera-hal-dev
+  mountpoint -q /mnt/camhal-backups || exit 1
+  python3 scripts/scheduled_backup.py /mnt/camhal-backups --retain-days 30
+  ```
+
+  스크립트는 중복 실행을 잠그고 새 백업의 무결성을 확인한 뒤에만 보관 기간이 지난
+  파일을 정리한다. 정리 대상은 이 스크립트가 생성한 `runs-YYYYMMDDTHHMMSSZ-<UUID>.sqlite3`
+  형식의 일반 파일뿐이다. 수동 백업과 심볼릭 링크는 건드리지 않는다. 백업 작업의
+  성공 여부를 스케줄러에서 감시하고 실패 시 알림을 설정한다.
+
   복원할 때는 서버를 중지한 뒤 별도 볼륨에서 백업 파일을 열어 기록 조회를 확인하고
   교체한다. 호스트 백업도 같은 물리 디스크에만 남기지 말고 별도 저장소로 복제한다.
   백업 주기·보관 기간·복원 훈련은 운영 환경의 데이터 정책에 맞춰 정해야 한다.

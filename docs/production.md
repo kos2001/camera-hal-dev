@@ -43,7 +43,7 @@
    종단 간 검증이 가능하다.
 
 Nginx는 로그인 세션에서 얻은 액세스 토큰으로 업스트림 `Authorization`을 새로 만든다.
-브라우저가 보낸 해당 헤더는 앱으로 통과시키지 않는다. 앱은 이 토큰의 서명·발급자·
+브라우저가 보낸 해당 헤더는 내부 인증 요청이나 앱으로 통과시키지 않는다. 앱은 이 토큰의 서명·발급자·
 audience·만료를 다시 검증한다. OAuth2 Proxy의 [Nginx 연동 방식](https://oauth2-proxy.github.io/oauth2-proxy/configuration/integrations/nginx/)을
 따르며, Redis가 재시작되면 세션은 사라져 사용자가 다시 로그인한다. 외부 TLS 인증서
 갱신과 Redis 가용성·복구는 배포 환경에서 운영해야 한다.

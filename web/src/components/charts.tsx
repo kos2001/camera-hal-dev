@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Lane } from '../api'
 
@@ -46,7 +47,7 @@ export function Timeline({ lanes, tEnd }: { lanes: Lane[]; tEnd: number }) {
         width={width}
         height={h}
         role="img"
-        aria-label="사건 타임라인"
+        aria-label={t("사건 타임라인")}
         onMouseMove={(e) => {
           const bx = e.currentTarget.getBoundingClientRect().left
           const px = e.clientX - bx

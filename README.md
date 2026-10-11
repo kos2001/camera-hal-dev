@@ -80,7 +80,7 @@ bash scripts/dev.sh       # 개발: 백엔드 :8010(reload) + Vite :5180(/api �
 접히고, 긴 기술 코드와 실행 폼은 화면 폭에 맞게 표시된다.
 
 처음 실행 시 `.venv`(FastAPI·uvicorn)와 `web/node_modules` 를 자동 설치한다.
-GitHub Actions CI는 Python 테스트, 프론트엔드 빌드, 컨테이너 빌드와 게이트웨이
+GitHub Actions CI는 Python 테스트, 프론트엔드 빌드·의존성 검사·양언어 브라우저 UI 검증, 컨테이너 빌드와 게이트웨이
 인증 경계·임시 OIDC 로그인 검사를 push/PR마다 실행한다.
 서버 배포와 CI는 `requirements-server.lock`, 프론트엔드는 `web/package-lock.json`의
 고정 버전을 사용한다. 직접 의존성 범위는 `requirements-server.txt`에 둔다.

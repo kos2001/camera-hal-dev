@@ -1,14 +1,40 @@
-# camhal-sim — Camera HAL3 이산 사건 시뮬레이터
+# camera-hal-dev (camhal-sim) — Camera HAL3 이산 사건 시뮬레이터
+
+<p><strong lang="ko">한국어</strong> · <a href="README.en.md" lang="en">English</a></p>
 
 [camera-hal-analysis](https://github.com/kos2001/camera-hal-analysis)(Camera HAL 고장 분석 어시스턴트)의
 **고장 시나리오 37종 × 대상 플랫폼 10종**을 기반으로, Android Camera HAL3 스택을 동작 수준에서 모사하고
 결함을 주입해 증상을 재현하는 도구다. CLI·Python 라이브러리·웹 앱(FastAPI + React)으로 쓸 수 있다.
+패키지·CLI 이름은 `camhal-sim`이다.
 
-![결함 시나리오 화면 — 한국어 워크스페이스](docs/images/faults.png)
+## 빠른 시작
 
-[영어 화면 보기](docs/images/faults-en.png)
+```sh
+git clone https://github.com/kos2001/camera-hal-dev.git
+cd camera-hal-dev
+bash scripts/serve.sh      # 웹 앱까지 한 번에 → http://127.0.0.1:8010
+```
 
-![F04 결함 주입 시 AE 휘도 진동 (목표 0.18 주변을 수렴하지 못함)](docs/images/run-result.png)
+웹 앱 없이 CLI만 쓰려면 Python ≥ 3.10 만 있으면 된다 (외부 패키지 없음):
+
+```sh
+python3 -m camhal_sim fault F01              # ZSL 버퍼 누수 재현
+python3 -m camhal_sim sweep                  # 37종 전부 검증
+```
+
+자세한 내용은 [빠른 시작 (CLI)](#빠른-시작-cli)과 [웹 앱](#웹-앱-프론트엔드--백엔드)을 본다.
+
+## 화면
+
+| 결함 시나리오 `#/faults` | 실행 결과 `#/history/<id>` |
+|---|---|
+| ![결함 시나리오 화면](docs/images/faults-en.png) | ![F04 실행 결과 — 계약 위반과 사건 타임라인](docs/images/run-result-en.png) |
+| 37종 목록(분류 필터·검색) → 증상·근본 원인·해결책·시뮬레이터 매핑, 결함 주입 vs 수정 상태 비교 실행 ([한국어 화면](docs/images/faults.png)) | F04 주입 실행: 판정 배지, 기대 위반 `AE_OSCILLATION` 검출, 레인별 사건 타임라인, HTML 리포트·Jira 이슈 내보내기 |
+
+| 자유 실행 `#/run` | 계측 시계열 (F04) |
+|---|---|
+| ![자유 실행 화면](docs/images/playground-en.png) | ![F04 결함 주입 시 AE 휘도 진동](docs/images/run-result.png) |
+| 플랫폼·워크로드·시드를 고르고 결함 여러 개를 조합해 실행 | AE 가 센서 설정 지연을 보상하지 않아 휘도가 목표 0.18 주변을 수렴하지 못하고 진동 |
 
 - **HAL 모델**: provider 열거·핫플러그·토치·IPC → configureStreams(포트 예산, subdev pad 협상,
   센서 모드, gralloc usage) → processCaptureRequest(센서 SOF, 버퍼 풀, 노출 래치, 타임스탬프,
@@ -30,12 +56,6 @@
 | 시뮬레이터 · CLI · 테스트 | Python ≥ 3.10 (외부 패키지 없음) |
 | 백엔드 API | `pip install -r requirements-server.lock` (FastAPI, uvicorn) |
 | 프론트엔드 | Node.js ≥ 20, npm |
-
-```sh
-git clone https://github.com/kos2001/camera-hal-dev.git
-cd camera-hal-dev
-bash scripts/serve.sh      # 웹 앱까지 한 번에 → http://127.0.0.1:8010
-```
 
 ## 빠른 시작 (CLI)
 
@@ -302,3 +322,7 @@ EOF
 - AIDL/HIDL 인터페이스는 메서드 의미만 따르며 바인더 직렬화·스레드풀은 없다.
 - 워크로드 예산(첫 프레임 1000ms, fps 27, 드롭 1%, 채널 편차 2ms, a/v 40ms)은 참고 시나리오
   로그의 요구치를 옮긴 것이다. 제품 요구가 다르면 `workloads.py` 의 budgets 를 조정한다.
+
+## 라이선스
+
+[MIT](LICENSE) — Copyright (c) 2026 kos2001

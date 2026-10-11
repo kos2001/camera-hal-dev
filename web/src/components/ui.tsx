@@ -1,3 +1,5 @@
+import { t, severityLabel, localizeError } from '../i18n'
+import { Icon } from './Icon'
 import type { ReactNode } from 'react'
 import { AUTH_REQUIRED_MESSAGE, loginUrl, type Severity } from '../api'
 
@@ -11,7 +13,7 @@ const SEV_STYLE: Record<Severity, string> = {
 export function SeverityBadge({ severity }: { severity: Severity }) {
   return (
     <span className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold ${SEV_STYLE[severity] ?? SEV_STYLE.Minor}`}>
-      {severity}
+      {severityLabel(severity)}
     </span>
   )
 }
@@ -46,24 +48,24 @@ export function Pill({ children, tone = 'neutral' }: { children: ReactNode; tone
     bad: 'border-red-300 bg-red-50 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300',
     info: 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300',
   }[tone]
-  return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>{children}</span>
+  return <span className={`pill inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>{children}</span>
 }
 
 export function Section({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
   return (
     <section className="card">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 px-4 py-2.5 dark:border-stone-800">
+      <header className="section-heading">
         <h3 className="text-sm font-semibold">{title}</h3>
         {right}
       </header>
-      <div className="p-4">{children}</div>
+      <div className="section-body">{children}</div>
     </section>
   )
 }
 
 export function Spinner({ label }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-2 text-sm text-stone-500">
+    <span role="status" className="inline-flex items-center gap-2 text-sm text-stone-500">
       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-stone-300 border-t-sky-600" />
       {label}
     </span>
@@ -75,15 +77,15 @@ export function ErrorBox({ error }: { error: string | null }) {
   const needsLogin = error.includes(AUTH_REQUIRED_MESSAGE)
   return (
     <div role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-      {error}
-      {needsLogin && <a className="ml-2 font-semibold underline" href={loginUrl()}>다시 로그인</a>}
+      {localizeError(error)}
+      {needsLogin && <a className="ml-2 font-semibold underline" href={loginUrl()}>{t("다시 로그인")}</a>}
     </div>
   )
 }
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className="flex min-w-0 flex-col gap-1">
       <span className="label">{label}</span>
       {children}
     </label>
@@ -91,5 +93,5 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="rounded-lg border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500 dark:border-stone-700">{children}</div>
+  return <div className="empty-state"><div className="empty-icon"><Icon name="layers" size={21} /></div><div className="empty-content">{children}</div></div>
 }

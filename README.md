@@ -4,7 +4,9 @@
 **고장 시나리오 37종 × 대상 플랫폼 10종**을 기반으로, Android Camera HAL3 스택을 동작 수준에서 모사하고
 결함을 주입해 증상을 재현하는 도구다. CLI·Python 라이브러리·웹 앱(FastAPI + React)으로 쓸 수 있다.
 
-![결함 시나리오 화면 — 결함 주입 vs 수정 상태 비교](docs/images/faults.png)
+![결함 시나리오 화면 — 한국어 워크스페이스](docs/images/faults.png)
+
+[영어 화면 보기](docs/images/faults-en.png)
 
 ![F04 결함 주입 시 AE 휘도 진동 (목표 0.18 주변을 수렴하지 못함)](docs/images/run-result.png)
 
@@ -71,6 +73,12 @@ bash scripts/serve.sh     # 프론트 빌드 후 단일 서버 → http://127.0.
 bash scripts/dev.sh       # 개발: 백엔드 :8010(reload) + Vite :5180(/api 프록시) → http://localhost:5180
 ```
 
+상단 **KO / EN** 버튼으로 한국어와 영어를 전환한다. 메뉴, 37개 결함의 증상·근본 원인·해결책,
+플랫폼·워크로드·검사기 설명, 저장된 실행 결과와 오류 안내가 함께 바뀐다. 언어를 바꿔도 현재
+실행 조건과 결과는 유지된다. 첫 방문은 브라우저 언어를 따르고, 이후에는 선택한 언어를 기억한다.
+상단 테마 버튼은 밝은 화면과 어두운 화면을 전환하며 선택을 저장한다. 작은 화면에서는 메뉴가
+접히고, 긴 기술 코드와 실행 폼은 화면 폭에 맞게 표시된다.
+
 처음 실행 시 `.venv`(FastAPI·uvicorn)와 `web/node_modules` 를 자동 설치한다.
 GitHub Actions CI는 Python 테스트, 프론트엔드 빌드, 컨테이너 빌드와 게이트웨이
 인증 경계·임시 OIDC 로그인 검사를 push/PR마다 실행한다.
@@ -88,6 +96,26 @@ Git에서 제외된다. 현재 단일 서버 운영 구성이므로
 공개 배포의 호스트 백업 내보내기는 `scripts/export_production_backup.py`를 사용한다.
 시뮬레이션 실행은 한 프로세스에서 동시에 최대 4건(사용자당 2건)까지 처리하고, 초과 요청은
 `503`과 `Retry-After: 1`을 반환한다. 요청 본문은 32 KiB까지 허용한다.
+
+### 브라우저 UI 검증
+
+빌드한 웹 앱과 API가 실행 중일 때 `web`에서 `npm run test:ui`로 브라우저 검증을 실행한다.
+언어·테마 저장, 검색·분류 필터, 비교 실행·기록 조회·자유 실행·검증 매트릭스·카탈로그,
+37개 결함의 주입/수정 판정과 영어 번역 누락, 모바일 화면, 오류·로그인 안내를 확인한다.
+검증은 실행 기록을 생성하므로 별도 데이터베이스를 사용하는 서버로 실행한다.
+
+```sh
+# 터미널 1: 별도 검증 서버
+CAMHAL_DB_PATH=/tmp/camhal-ui-smoke.sqlite3 PORT=8126 bash scripts/serve.sh
+
+# 터미널 2
+cd web
+npx playwright install chromium
+CAMHAL_BASE_URL=http://127.0.0.1:8126 npm run test:ui
+```
+
+`CHROME_EXECUTABLE`에 설치된 Chrome 실행 파일을 지정하면 별도 Chromium 설치 없이 검증할 수 있다.
+`CAMHAL_SCREENSHOTS=/tmp/camhal-screenshots`를 지정하면 한국어·영어·다크 테마·모바일 화면을 PNG로 저장한다.
 
 ### 컨테이너 실행
 

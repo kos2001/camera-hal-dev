@@ -1,17 +1,21 @@
+import { t, useLocale, categoryLabel } from '../i18n'
 import { useEffect, useMemo, useState } from 'react'
 import { api, type EventPage, type RunPayload, type Violation } from '../api'
+import { localizeRun } from '../locales/catalog-en'
 import { LineChart, Timeline, type Series } from './charts'
 import { CategoryDot, Empty, ErrorBox, Pill, Section, SeverityBadge } from './ui'
 
 const PALETTE = ['#0284c7', '#db2777', '#16a34a', '#ea580c', '#7c3aed', '#0d9488']
 
 // --------------------------------------------------------------------------- //
-export function RunView({ run }: { run: RunPayload }) {
+export function RunView({ run: original }: { run: RunPayload }) {
+  const locale = useLocale()
+  const run = useMemo(() => localizeRun(original, locale), [original, locale])
   return (
-    <div className="flex flex-col gap-4">
+    <div className="run-result flex flex-col gap-4">
       <RunHeader run={run} />
       <Violations violations={run.violations} expected={run.verdict?.expected ?? []} />
-      <Section title="사건 타임라인" right={<span className="text-xs text-stone-500">{Object.values(run.counters).reduce((a, b) => a + b, 0).toLocaleString()} events · {(run.sim_ms / 1000).toFixed(2)}s</span>}>
+      <Section title={t("사건 타임라인")} right={<span className="text-xs text-stone-500">{Object.values(run.counters).reduce((a, b) => a + b, 0).toLocaleString()} events · {(run.sim_ms / 1000).toFixed(2)}s</span>}>
         <div className="overflow-x-auto">
           <Timeline lanes={run.timeline.lanes} tEnd={run.timeline.t_end_ms} />
         </div>
@@ -54,9 +58,9 @@ function RunHeader({ run }: { run: RunPayload }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            {v && (v.injected ? (v.detected ? <Pill tone="ok">기대 위반 모두 검출</Pill> : <Pill tone="bad">미검출: {v.missing.join(', ')}</Pill>) : v.clean ? <Pill tone="ok">수정 상태 · 위반 0건</Pill> : <Pill tone="bad">수정 상태인데 위반 {run.violations.length}건</Pill>)}
-            {!v && (run.violations.length ? <Pill tone="bad">위반 {run.violations.length}종</Pill> : <Pill tone="ok">위반 없음</Pill>)}
-            {run.defects.length ? run.defects.map((d) => <Pill key={d} tone="info">⚡ {d}</Pill>) : <Pill>결함 미주입</Pill>}
+            {v && (v.injected ? (v.detected ? <Pill tone="ok">{t("기대 위반 모두 검출")}</Pill> : <Pill tone="bad">{t('미검출: {0}', v.missing.join(', '))}</Pill>) : v.clean ? <Pill tone="ok">{t("수정 상태 · 위반 0건")}</Pill> : <Pill tone="bad">{t('수정 상태 · 위반 {0}건', run.violations.length)}</Pill>)}
+            {!v && (run.violations.length ? <Pill tone="bad">{t('위반 {0}종', run.violations.length)}</Pill> : <Pill tone="ok">{t("위반 없음")}</Pill>)}
+            {run.defects.length ? run.defects.map((d) => <Pill key={d} tone="info">⚡ {d}</Pill>) : <Pill>{t("결함 미주입")}</Pill>}
           </div>
           <h2 className="mt-2 text-base font-semibold leading-snug">{run.fault ? run.fault.title.replace('{chip}', run.platform.code).replace(run.fault.platform, run.platform.code) : run.workload.title}</h2>
           <p className="mt-1 text-xs text-stone-500">
@@ -64,15 +68,15 @@ function RunHeader({ run }: { run: RunPayload }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a className="btn-ghost" href={`#/history/${run.id}`}>실행 기록 링크</a>
-          <a className="btn-ghost" href={api.reportUrl(run.id)} target="_blank" rel="noreferrer">HTML 리포트 ↗</a>
-          <button className="btn-ghost" onClick={() => exportIssue('copy')}>{copied ? '복사됨' : 'Jira 이슈 복사'}</button>
-          <button className="btn-ghost" onClick={() => exportIssue('download')}>이슈 JSON ↓</button>
+          <a className="btn-ghost" href={`#/history/${run.id}`}>{t("실행 기록 링크")}</a>
+          <a className="btn-ghost" href={api.reportUrl(run.id)} target="_blank" rel="noreferrer">{t("HTML 리포트 ↗")}</a>
+          <button className="btn-ghost" onClick={() => exportIssue('copy')}>{copied ? t("복사됨") : t("Jira 이슈 복사")}</button>
+          <button className="btn-ghost" onClick={() => exportIssue('download')}>{t("이슈 JSON ↓")}</button>
         </div>
       </div>
       {exportError && <div className="mt-3"><ErrorBox error={exportError} /></div>}
       <details className="mt-3 text-sm">
-        <summary className="cursor-pointer text-xs font-medium text-sky-700 dark:text-sky-400">재현 절차 {run.workload.steps.length}단계{Object.keys(run.workload.budgets).length ? ' · 요구 기준' : ''}</summary>
+        <summary className="cursor-pointer text-xs font-medium text-sky-700 dark:text-sky-400">{t('재현 절차 {0}단계', run.workload.steps.length)}{Object.keys(run.workload.budgets).length ? t(" · 요구 기준") : ''}</summary>
         <ol className="mt-2 list-decimal space-y-0.5 pl-5 text-stone-600 dark:text-stone-300">
           {run.workload.steps.map((s) => <li key={s}>{s}</li>)}
         </ol>
@@ -89,22 +93,20 @@ function Violations({ violations, expected }: { violations: Violation[]; expecte
   const [open, setOpen] = useState<string | null>(null)
   if (!violations.length)
     return (
-      <div className="card flex items-center gap-2 border-emerald-300 bg-emerald-50/60 p-4 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/5 dark:text-emerald-300">
-        ✓ 검사기 35종 모두 통과 — 계약 위반이 관찰되지 않았습니다.
-      </div>
+      <div className="card flex items-center gap-2 border-emerald-300 bg-emerald-50/60 p-4 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/5 dark:text-emerald-300">{t("✓ 검사기 35종 모두 통과 — 계약 위반이 관찰되지 않았습니다.")} </div>
     )
   return (
-    <Section title={`계약 위반 ${violations.length}종`}>
+    <Section title={t("계약 위반 {0}종", violations.length)}>
       <ul className="flex flex-col divide-y divide-stone-200 dark:divide-stone-800">
         {violations.map((v) => (
           <li key={v.code} className="py-2.5 first:pt-0 last:pb-0">
             <button className="flex w-full flex-wrap items-center gap-2 text-left" onClick={() => setOpen(open === v.code ? null : v.code)}>
               <SeverityBadge severity={v.severity} />
               <span className="font-mono text-[13px] font-semibold">{v.code}</span>
-              {expected.includes(v.code) && <Pill tone="info">기대</Pill>}
-              <span className="flex items-center gap-1 text-xs text-stone-500"><CategoryDot category={v.category} />{v.category}</span>
+              {expected.includes(v.code) && <Pill tone="info">{t("기대")}</Pill>}
+              <span className="flex items-center gap-1 text-xs text-stone-500"><CategoryDot category={v.category} />{categoryLabel(v.category)}</span>
               <span className="text-xs text-stone-400">×{v.count}</span>
-              <span className="ml-auto text-xs text-sky-700 dark:text-sky-400">{open === v.code ? '근거 닫기' : '근거 보기'}</span>
+              <span className="ml-auto text-xs text-sky-700 dark:text-sky-400">{open === v.code ? t("근거 닫기") : t("근거 보기")}</span>
             </button>
             <p className="mt-1 text-sm">{v.title}</p>
             <p className="text-sm text-stone-500 dark:text-stone-400">{v.detail}</p>
@@ -122,19 +124,20 @@ function Violations({ violations, expected }: { violations: Violation[]; expecte
 type ChartKey = 'luma' | 'exposure' | 'interval' | 'tsdelta' | 'wb' | 'memory'
 
 function Charts({ run }: { run: RunPayload }) {
+  const locale = useLocale()
   const frames = run.series.frames
   const hasFrames = frames.some((f) => f.points.length > 1)
   const available: { key: ChartKey; label: string }[] = [
     ...(hasFrames
       ? ([
-          { key: 'luma', label: '휘도 (AE)' },
-          { key: 'exposure', label: '노출 / 프레임 길이' },
-          { key: 'interval', label: '결과 도착 간격' },
-          { key: 'tsdelta', label: '타임스탬프 Δ' },
-          { key: 'wb', label: 'WB 오차' },
+          { key: 'luma', label: t("휘도 (AE)") },
+          { key: 'exposure', label: t("노출 / 프레임 길이") },
+          { key: 'interval', label: t("결과 도착 간격") },
+          { key: 'tsdelta', label: t("타임스탬프 Δ") },
+          { key: 'wb', label: t("WB 오차") },
         ] as const)
       : []),
-    ...(run.series.memory.length ? ([{ key: 'memory', label: 'provider 메모리' }] as const) : []),
+    ...(run.series.memory.length ? ([{ key: 'memory', label: t("provider 메모리") }] as const) : []),
   ]
   const [tab, setTab] = useState<ChartKey>(available[0]?.key ?? 'luma')
   const active = available.find((a) => a.key === tab) ? tab : available[0]?.key
@@ -156,9 +159,9 @@ function Charts({ run }: { run: RunPayload }) {
       case 'interval':
         return { series: per((p) => p.interval_ms), yLabel: 'ms between results' }
       case 'tsdelta':
-        return { series: per((p) => p.ts_delta_ms), yLabel: 'Δ sensor timestamp (ms, ≤0 = 역전)' }
+        return { series: per((p) => p.ts_delta_ms), yLabel: t("Δ sensor timestamp (ms, ≤0 = 역전)") }
       case 'wb':
-        return { series: per((p) => p.wb_error_k), yLabel: 'K', refLine: { y: 800, label: '허용 800K' } }
+        return { series: per((p) => p.wb_error_k), yLabel: 'K', refLine: { y: 800, label: t("허용 800K") } }
       case 'memory':
         return {
           series: [{ name: 'RSS MB', color: '#ea580c', points: run.series.memory.map((m) => ({ x: m.t_ms, y: m.rss_mb })) }],
@@ -168,12 +171,12 @@ function Charts({ run }: { run: RunPayload }) {
       default:
         return null
     }
-  }, [active, frames, run.series.memory])
+  }, [active, frames, run.series.memory, locale])
 
   if (!available.length) return null
   return (
     <Section
-      title="계측 시계열"
+      title={t("계측 시계열")}
       right={
         <div className="flex flex-wrap gap-1">
           {available.map((a) => (
@@ -208,19 +211,19 @@ function LogViewer({ run }: { run: RunPayload }) {
   )
   return (
     <Section
-      title={`logcat ${run.logs_total.toLocaleString()}줄`}
+      title={t("logcat {0}줄", run.logs_total.toLocaleString())}
       right={
         <div className="flex flex-wrap items-center gap-2">
           <select className="input h-8" value={minLevel} onChange={(e) => setMinLevel(e.target.value as 'all' | 'WEF')}>
-            <option value="all">전체 레벨</option>
+            <option value="all">{t("전체 레벨")}</option>
             <option value="WEF">W / E / F</option>
           </select>
-          <input className="input h-8 w-44" placeholder="tag·메시지 검색" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="input h-8 w-44" placeholder={t("tag·메시지 검색")} value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
       }
     >
       {lines.length ? (
-        <div className="mono max-h-80 overflow-auto rounded-md bg-stone-50 p-2 dark:bg-black/30">
+        <div data-original-content className="mono max-h-80 overflow-auto rounded-md bg-stone-50 p-2 dark:bg-black/30">
           {lines.map((l, i) => (
             <div key={i} className="whitespace-pre-wrap break-all">
               <span className="text-stone-400">{(l.t_ms / 1000).toFixed(4).padStart(9)}</span>{' '}
@@ -230,9 +233,9 @@ function LogViewer({ run }: { run: RunPayload }) {
           ))}
         </div>
       ) : (
-        <Empty>조건에 맞는 로그가 없습니다.</Empty>
+        <Empty>{t("조건에 맞는 로그가 없습니다.")}</Empty>
       )}
-      {run.logs.length < run.logs_total && <p className="mt-2 text-xs text-stone-500">앞 {run.logs.length.toLocaleString()}줄만 표시 — 전체는 HTML 리포트/JSON 에서 확인</p>}
+      {run.logs.length < run.logs_total && <p className="mt-2 text-xs text-stone-500">{t('앞 {0}줄만 표시 — 전체는 HTML 리포트/JSON에서 확인', run.logs.length.toLocaleString())}</p>}
     </Section>
   )
 }
@@ -265,13 +268,13 @@ function EventBrowser({ run }: { run: RunPayload }) {
 
   return (
     <Section
-      title="사건 원본"
+      title={t("사건 원본")}
       right={
-        <button className="btn-ghost h-8" onClick={() => setOpen(!open)}>{open ? '접기' : '펼치기'}</button>
+        <button className="btn-ghost h-8" onClick={() => setOpen(!open)}>{open ? t("접기") : t("펼치기")}</button>
       }
     >
       {!open ? (
-        <p className="text-sm text-stone-500">프레임워크가 관찰한 사건(콜백·메타데이터·통계) 원본을 종류별로 조회합니다.</p>
+        <p className="text-sm text-stone-500">{t("프레임워크가 관찰한 사건(콜백·메타데이터·통계) 원본을 종류별로 조회합니다.")}</p>
       ) : (
         <>
           {error && <div className="mb-3"><ErrorBox error={error} /></div>}
@@ -279,8 +282,8 @@ function EventBrowser({ run }: { run: RunPayload }) {
             <select className="input h-8" value={kind} onChange={(e) => { setKind(e.target.value); setOffset(0) }}>
               {run.timeline.lanes.map((l) => <option key={l.kind} value={l.kind}>{l.kind} ({l.count})</option>)}
             </select>
-            <button className="btn-ghost h-8" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>← 이전</button>
-            <button className="btn-ghost h-8" disabled={!page || offset + PAGE >= page.total} onClick={() => setOffset(offset + PAGE)}>다음 →</button>
+            <button className="btn-ghost h-8" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - PAGE))}>{t("← 이전")}</button>
+            <button className="btn-ghost h-8" disabled={!page || offset + PAGE >= page.total} onClick={() => setOffset(offset + PAGE)}>{t("다음 →")}</button>
             {page && <span className="text-xs text-stone-500">{offset + 1}–{Math.min(offset + PAGE, page.total)} / {page.total}</span>}
           </div>
           <div className="mono max-h-96 overflow-auto rounded-md bg-stone-50 p-2 dark:bg-black/30">

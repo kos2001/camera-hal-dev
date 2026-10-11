@@ -1,0 +1,5 @@
+# Attach a verified, separately prepared volume during a recovery operation.
+volumes:
+  camhal-data:
+    external: true
+    name: ${CAMHAL_RESTORE_VOLUME:?Set a unique restored volume name}

@@ -1,0 +1,26 @@
+x-json-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  camhal:
+    build: .
+    environment:
+      CAMHAL_ENV: development
+      CAMHAL_AUTH_MODE: local
+    ports:
+      - "127.0.0.1:8010:8010"
+    volumes:
+      - camhal-data:/var/lib/camhal
+    restart: unless-stopped
+    logging: *bounded-logs
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  camhal-data:

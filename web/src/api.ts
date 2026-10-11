@@ -55,6 +55,7 @@ export interface CheckerInfo {
 
 export interface Catalog {
   version: string
+  auth_mode: 'local' | 'oidc'
   categories: string[]
   platforms: Platform[]
   workloads: Workload[]
@@ -156,21 +157,44 @@ export interface EventPage {
   items: Record<string, unknown>[]
 }
 
+export interface RunSummary {
+  cursor: number
+  id: string
+  platform: string
+  workload: string
+  fault: string | null
+  defects: string[]
+  seed: number
+  violations: number
+  created_at?: string
+}
+
+export const AUTH_REQUIRED_MESSAGE = '로그인 세션이 만료되었거나 API 토큰을 확인할 수 없습니다.'
+
+export function loginUrl(): string {
+  const returnTo = window.location.pathname + window.location.search + window.location.hash
+  return `/oauth2/start?rd=${encodeURIComponent(returnTo)}`
+}
+
+async function checkResponse(res: Response): Promise<void> {
+  if (res.ok) return
+  if (res.status === 401) throw new Error(AUTH_REQUIRED_MESSAGE)
+  let message = `${res.status} ${res.statusText}`
+  try {
+    const body = await res.json()
+    message = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)
+  } catch {
+    /* 본문 없음 */
+  }
+  throw new Error(message)
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   })
-  if (!res.ok) {
-    let msg = `${res.status} ${res.statusText}`
-    try {
-      const body = await res.json()
-      msg = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)
-    } catch {
-      /* 본문 없음 */
-    }
-    throw new Error(msg)
-  }
+  await checkResponse(res)
   return res.json() as Promise<T>
 }
 
@@ -178,6 +202,21 @@ const post = <T,>(path: string, body: unknown) => call<T>(path, { method: 'POST'
 
 export const api = {
   catalog: () => call<Catalog>('/catalog'),
+  runs: (limit = 50, before?: number) => {
+    const q = new URLSearchParams({ limit: String(limit) })
+    if (before !== undefined) q.set('before', String(before))
+    return call<RunSummary[]>(`/runs?${q}`)
+  },
+  getRun: (rid: string) => call<RunPayload>(`/runs/${encodeURIComponent(rid)}`),
+  deleteAllRuns: async () => {
+    const res = await fetch('/api/runs', { method: 'DELETE' })
+    await checkResponse(res)
+    return res.json() as Promise<{ deleted: number }>
+  },
+  deleteRun: async (rid: string) => {
+    const res = await fetch(`/api/runs/${encodeURIComponent(rid)}`, { method: 'DELETE' })
+    await checkResponse(res)
+  },
   run: (body: { platform: string; workload: string; defects: string[]; seed: number }) =>
     post<RunPayload>('/run', body),
   runFault: (id: string, body: { platform?: string; seed: number; fixed: boolean }) =>

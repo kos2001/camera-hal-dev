@@ -4,7 +4,9 @@
 **고장 시나리오 37종 × 대상 플랫폼 10종**을 기반으로, Android Camera HAL3 스택을 동작 수준에서 모사하고
 결함을 주입해 증상을 재현하는 도구다. CLI·Python 라이브러리·웹 앱(FastAPI + React)으로 쓸 수 있다.
 
-![결함 시나리오 화면 — 결함 주입 vs 수정 상태 비교](docs/images/faults.png)
+![결함 시나리오 화면 — 한국어 워크스페이스](docs/images/faults.png)
+
+[영어 화면 보기](docs/images/faults-en.png)
 
 ![F04 결함 주입 시 AE 휘도 진동 (목표 0.18 주변을 수렴하지 못함)](docs/images/run-result.png)
 
@@ -26,7 +28,7 @@
 | 용도 | 필요 |
 |---|---|
 | 시뮬레이터 · CLI · 테스트 | Python ≥ 3.10 (외부 패키지 없음) |
-| 백엔드 API | `pip install -r requirements-server.txt` (FastAPI, uvicorn) |
+| 백엔드 API | `pip install -r requirements-server.lock` (FastAPI, uvicorn) |
 | 프론트엔드 | Node.js ≥ 20, npm |
 
 ```sh
@@ -71,12 +73,71 @@ bash scripts/serve.sh     # 프론트 빌드 후 단일 서버 → http://127.0.
 bash scripts/dev.sh       # 개발: 백엔드 :8010(reload) + Vite :5180(/api 프록시) → http://localhost:5180
 ```
 
+상단 **KO / EN** 버튼으로 한국어와 영어를 전환한다. 메뉴, 37개 결함의 증상·근본 원인·해결책,
+플랫폼·워크로드·검사기 설명, 저장된 실행 결과와 오류 안내가 함께 바뀐다. 언어를 바꿔도 현재
+실행 조건과 결과는 유지된다. 첫 방문은 브라우저 언어를 따르고, 이후에는 선택한 언어를 기억한다.
+상단 테마 버튼은 밝은 화면과 어두운 화면을 전환하며 선택을 저장한다. 작은 화면에서는 메뉴가
+접히고, 긴 기술 코드와 실행 폼은 화면 폭에 맞게 표시된다.
+
 처음 실행 시 `.venv`(FastAPI·uvicorn)와 `web/node_modules` 를 자동 설치한다.
+GitHub Actions CI는 Python 테스트, 프론트엔드 빌드·의존성 검사·양언어 브라우저 UI 검증, 컨테이너 빌드와 게이트웨이
+인증 경계·임시 OIDC 로그인 검사를 push/PR마다 실행한다.
+서버 배포와 CI는 `requirements-server.lock`, 프론트엔드는 `web/package-lock.json`의
+고정 버전을 사용한다. 직접 의존성 범위는 `requirements-server.txt`에 둔다.
+
+실행 결과(요약, 사건, 이슈 JSON, HTML 리포트)는 기본적으로 `data/runs.sqlite3`에 저장된다.
+새 실행 데이터는 압축 저장하고 기존 비압축 기록도 읽는다. 서버를 재시작해도 조회할 수 있으며
+기본값은 전체 최대 1,000건, 사용자당 최대 200건이며 운영 환경에서 두 한도를 설정할 수 있다. 저장 경로를 바꾸려면
+`CAMHAL_DB_PATH=/영구/볼륨/runs.sqlite3 bash scripts/serve.sh`로 실행한다.
+운영 중 백업은 `python3 scripts/backup_runs.py --db data/runs.sqlite3 /백업/경로/runs.sqlite3`로
+만든다. 기존 대상 파일은 덮어쓰지 않고 복사본의 무결성을 확인한다. 데이터 디렉터리는
+Git에서 제외된다. 현재 단일 서버 운영 구성이므로
+여러 서버 인스턴스에서 같은 SQLite 파일을 공유하는 배포는 지원하지 않는다.
+공개 배포의 호스트 백업 내보내기는 `scripts/export_production_backup.py`를 사용한다.
+시뮬레이션 실행은 한 프로세스에서 동시에 최대 4건(사용자당 2건)까지 처리하고, 초과 요청은
+`503`과 `Retry-After: 1`을 반환한다. 요청 본문은 32 KiB까지 허용한다.
+
+### 브라우저 UI 검증
+
+빌드한 웹 앱과 API가 실행 중일 때 `web`에서 `npm run test:ui`로 브라우저 검증을 실행한다.
+언어·테마 저장, 검색·분류 필터, 비교 실행·기록 조회·자유 실행·검증 매트릭스·카탈로그,
+37개 결함의 주입/수정 판정과 영어 번역 누락, 모바일 화면, 오류·로그인 안내를 확인한다.
+검증은 실행 기록을 생성하므로 별도 데이터베이스를 사용하는 서버로 실행한다.
+
+```sh
+# 터미널 1: 별도 검증 서버
+CAMHAL_DB_PATH=/tmp/camhal-ui-smoke.sqlite3 PORT=8126 bash scripts/serve.sh
+
+# 터미널 2
+cd web
+npx playwright install chromium
+CAMHAL_BASE_URL=http://127.0.0.1:8126 npm run test:ui
+```
+
+`CHROME_EXECUTABLE`에 설치된 Chrome 실행 파일을 지정하면 별도 Chromium 설치 없이 검증할 수 있다.
+`CAMHAL_SCREENSHOTS=/tmp/camhal-screenshots`를 지정하면 한국어·영어·다크 테마·모바일 화면을 PNG로 저장한다.
+
+### 컨테이너 실행
+
+```sh
+docker compose up --build -d
+curl http://127.0.0.1:8010/api/ready
+```
+
+`compose.yaml`은 단일 인스턴스를 비관리자 권한과 읽기 전용 루트 파일 시스템으로 실행하고,
+실행 결과를 `camhal-data` 볼륨에 보관한다. 호스트 포트는 기본적으로 `127.0.0.1`에만
+열리며 개발용 인증 모드를 명시한다. 컨테이너 이미지를 Compose 없이 실행하면 기본적으로
+운영 인증 설정을 요구하므로 OIDC 설정 없이 API가 시작되지 않는다.
+공개 배포용 `compose.production.yaml`은 Nginx HTTPS, OAuth2 Proxy 로그인,
+앱의 OIDC 토큰 검증을 연결한다. 도메인·TLS 인증서·OIDC 공급자 설정 방법은
+[운영 배포 안내](docs/production.md)에 정리했다. 여러 인스턴스로 확장하려면
+공유 가능한 저장소와 실행 작업 큐가 먼저 필요하다.
 
 | 화면 | 내용 |
 |---|---|
 | 결함 시나리오 `#/faults/F04` | 37종 목록(분류 필터·검색) → 증상·근본원인·해결책·시뮬레이터 매핑. 선택 즉시 **결함 주입 vs 수정 상태** 비교 실행, 플랫폼을 바꿔 다른 벤더 스택에 이식 |
 | 자유 실행 `#/run` | 플랫폼·워크로드·시드 + 결함 여러 개 조합 실행 |
+| 실행 기록 `#/history` | 저장된 결과를 최신 순으로 조회하고, 개별 결과를 링크로 다시 열기 |
 | 검증 매트릭스 `#/sweep` | 74회 실행으로 검출/오탐 표, 분류별 통과 수. 행 클릭 시 해당 결함으로 이동 |
 | 카탈로그 `#/catalog` | 플랫폼 프로파일, 워크로드 절차·요구 기준, 검사기와 대상 결함 |
 
@@ -88,16 +149,19 @@ Jira 이슈 복사/다운로드.
 
 | 메서드 · 경로 | 설명 |
 |---|---|
+| `GET /api/health` · `/api/ready` | 프로세스 생존·저장소 준비 상태 |
 | `GET /api/catalog` | 플랫폼·워크로드·결함·검사기·분류 |
 | `POST /api/run` | `{platform, workload, defects[], seed}` — defects 는 스위치 이름 또는 `F01` |
 | `POST /api/faults/{id}/run` | `{platform?, seed, fixed}` |
 | `POST /api/faults/{id}/compare` | 결함 주입/수정 상태 두 실행을 한 번에 |
 | `POST /api/sweep` | `{seed, only?}` 검증 매트릭스(시드별 캐시) |
+| `GET /api/runs?limit=50&before=커서` | 최신 실행 목록. 최대 200건씩 조회하며 다음 페이지는 마지막 항목의 `cursor`를 사용 |
 | `GET /api/runs/{rid}` · `/events?kind&offset&limit` · `/issue` · `/report.html` | 실행 결과·사건 페이징·Jira 이슈·HTML 리포트 |
+| `DELETE /api/runs/{rid}` · `DELETE /api/runs` | 자신의 기록 한 건 또는 전체 기록 삭제 |
 
-실행 결과는 프로세스 메모리에 최근 40건만 보관한다(재시작 시 사라짐). 응답은 사건 전체 대신
+실행 결과는 SQLite에 전체 최대 1,000건(사용자당 최대 200건)을 보관한다. 응답은 사건 전체 대신
 타임라인 레인(레인당 최대 800점)·시계열(최대 1200점)·로그(최대 3000줄)로 요약하고, 원본은
-`/events` 로 페이지 조회한다. 인증이 없으므로 로컬(127.0.0.1)에서만 띄운다.
+`/events`로 페이지 조회한다. 로컬 모드는 개발 전용이며 운영 모드는 OIDC 인증을 요구한다.
 
 ```
 backend/   app.py (라우트·실행 저장소)  serialize.py (결과 → 타임라인/시계열 요약)

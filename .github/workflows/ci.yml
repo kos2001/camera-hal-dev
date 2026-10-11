@@ -42,6 +42,23 @@ jobs:
       - name: Build web app
         run: npm run build
         working-directory: web
+      - name: Install browser for UI tests
+        run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Verify bilingual browser UI
+        run: |
+          export CAMHAL_DB_PATH="${RUNNER_TEMP}/camhal-ui-smoke.sqlite3"
+          python -m uvicorn backend.app:app --host 127.0.0.1 --port 8010 --no-access-log > "${RUNNER_TEMP}/camhal-ui-server.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8010/api/ready > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8010/api/ready
+          CAMHAL_BASE_URL=http://127.0.0.1:8010 npm run test:ui --prefix web
       - name: Build container image
         run: docker build -t camhal-sim:ci .
       - name: Verify image fails closed without OIDC configuration

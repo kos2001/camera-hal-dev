@@ -86,7 +86,7 @@ services:
       - no-new-privileges:true
 
   nginx:
-    image: nginx:1.30.4-alpine
+    image: nginx:1.31.0-alpine
     ports:
       - "80:80"
       - "443:443"
